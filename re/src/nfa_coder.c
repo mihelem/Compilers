@@ -47,6 +47,7 @@ string_t *dfa_node_goto_coder (string_t *code, nfa_node_t *node, const char *inp
 
 char *dfa_goto_coder (nfa_t *dfa, const char *name, const char *input) {
 	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(dfa, dummy_print_nfa_node);
+	unset_flags(&nodes, ~flag_nfa_node_visited);
 	string_t code;
 	place_string_t(&code);
 

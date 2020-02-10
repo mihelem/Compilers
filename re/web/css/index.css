@@ -1,0 +1,60 @@
+* {
+  font-family: Courier, monospace;
+  color: #000000;
+}
+
+.user_input {
+	overflow: visible;
+	position: fixed;
+	top: 2px;
+	width: calc(100% - 18px);
+	width: -moz-calc(100% - 18px);
+	width: -webkit-calc(100% - 18px);
+	box-shadow: none;
+}
+
+.user_options {
+	margin-top: 6px;
+	opacity: 0;
+	background-color: #fffbfb;
+	border: 2px solid #ffffff;
+	transition: opacity 0.5s ease-in-out;
+        box-shadow: 0 2px 3px rgba(100,100,100,0.2);
+}
+
+.user_options:hover {
+        opacity: 1;	
+}
+
+.user_options:focus {
+	opacity: 1;
+}
+
+.program_output {
+	margin-top: 50px;
+	background-color: #ffffff;
+}
+
+input[type=textarea] {
+	width: 100%;
+	background-color: #f8f8f8;
+	color: #000000;
+	transition: background-color 2s ease-in-out, box-shadow 0.3s ease-in-out;
+	font-weight: normal;
+	border: 2px solid #ffffff;
+	border-radius: 3px;
+	box-shadow: 0 4px 6px rgba(0,0,0,0);
+	outline: none;
+}
+
+input[type=textarea]:hover {
+	background-color: #f8f8f8;
+	font-weight: bold;
+	box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+input[type=textarea]:focus {
+	background-color: #f0f4ff;
+	font-weight: bold;
+	box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}

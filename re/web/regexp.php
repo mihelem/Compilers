@@ -53,14 +53,11 @@ final class RegExp {
 	}
 
 	public function parse() {
+		$command = self::REGEXPARSER.' '.implode(' ', $this->getParserArgs())." < ".$this->filename;
 		$parser_output =
 			explode(
 				self::SEPARATOR,
-				shell_exec(
-					self::REGEXPARSER.' '
-					.implode(' ', $this->getParserArgs())
-					." < ".$this->filename
-				));
+				shell_exec($command));
 
 		foreach ($parser_output as $i => $output) {
 			$id = strstr($output, "\n", true);
@@ -75,11 +72,11 @@ final class RegExp {
 
 	protected function renderBody(
 		$graph,
-		$opt) 
+		$opt)
 	{
 		$id = $this->options[$graph][$opt]['id'];
 		if ($opt == 'mermaid') {
-			return 
+			return
 				"<div id=\"".$id."\" class=\"mermaid\">"
 					.$this->options[$graph][$opt]['body']
 				."</div>";

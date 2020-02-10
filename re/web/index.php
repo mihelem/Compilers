@@ -11,7 +11,8 @@ require_once "commons.php";
 <!DOCTYPE html>
 <html>
 <head>
-	<link rel="stylesheet" href="./css/prova.css">
+	<title>RegExp</title>
+	<link rel="stylesheet" href="./css/index.css">
 
 	<script src="./js/node_modules/mermaid/dist/mermaid.js"></script>
 	<script>
@@ -46,7 +47,7 @@ require_once "commons.php";
  	function setOptions(opts) {
  		for (var graph in opts) {
  			for (var opt in opts[graph]) {
- 				opts[graph][opt] = 
+ 				opts[graph][opt] =
  					document.getElementById(graph+'_'+opt).checked == true ? 1 : 0;
  			}
  		}
@@ -113,15 +114,16 @@ require_once "commons.php";
 	</script>
 </head>
 <body>
+<div class="user_input">
 <form>
-	RegExp:
 	<input
-		type="text"
+		type="textarea"
 		onkeyup="parseRegexp()"
-		id="regexp" size="120"
-		maxlength="10000"
+		id="regexp"
+		maxlength="-1"
 		autofocus><br />
-	<table>
+	<div class="user_options">
+	<table style="width:100%">
 		<?php
 			foreach ($graphs as $graph => $graph_desc) {
 				echo "<tr>";
@@ -133,7 +135,11 @@ require_once "commons.php";
 			}
 		?>
 	</table>
+	</div>
 </form>
+</div>
+<div class="program_output">
 <p><span id="resultSpan"></span></p>
+</div>
 </body>
 </html>
