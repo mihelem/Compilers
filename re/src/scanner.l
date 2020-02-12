@@ -13,7 +13,7 @@
 
 [\n\r]+ 		return EOL;
 [\t\b\a\f]		;
-[][?()|*+^-]	return *yytext;
+[][?()|*+^&-]	return *yytext;
 \\				BEGIN(ESCAPED);
 .				yylval.character = yytext[0]; return LITERAL;
 

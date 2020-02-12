@@ -6,6 +6,7 @@
 #include "commons.h"
 #include "vector_macros.h"
 #include "range.h"
+#include "trie.h"
 
 #define flag_nfa_node_visited 1
 #define flag_nfa_node_initial 2
@@ -33,6 +34,7 @@ typedef struct nfa_t {
 } nfa_t;
 
 nfa_t *place_nfa_t (nfa_t *nfa);
+nfa_t *destroy_nodes_of_nfa (nfa_t *nfa);
 void destroy_nfa_t (nfa_t *nfa);
 void copy_nfa_t (const nfa_t *source, nfa_t *dest);
 void add_nfa_edge (nfa_node_t *source, nfa_node_t *dest, uint8_t literal);
@@ -65,5 +67,10 @@ vector_type(pnfa_node_t) *setup_nfa_from_nodes (nfa_t *nfa, vector_type(pnfa_nod
 nfa_t *set_extremality_flags (nfa_t *nfa);
 
 vector_def_header(nfa_t);
+
+vector_def_header(vector_type(pnfa_node_t));
+typedef vector_type(vector_type(pnfa_node_t)) subset_dfa_nodes_t;
+
+nfa_t intersection_nfa (nfa_t *nfa1, nfa_t *nfa2);
 
 #endif

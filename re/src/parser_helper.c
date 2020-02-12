@@ -50,7 +50,6 @@ void set_options_from_command_line(int argc, char **argv) {
 	}
 }
 
-//dummy_print_nfa_node; //print_as_mermaid_body_nfa_node; //print_nfa_node;
 void print_response (nfa_t *nfa) {
 	static const uint64_t mdfa_checked = mdfa_gotocode | mdfa_mermaid | mdfa_search;
 	static const uint64_t suffixmdfa_checked = suffixmdfa_gotocode | suffixmdfa_mermaid | suffixmdfa_search;
@@ -65,6 +64,14 @@ void print_response (nfa_t *nfa) {
 	place_nfa_t(&suffixmdfa);
 	vector_type(pnfa_node_t) suffixmdfa_nodes = vector(pnfa_node_t, 0);
 
+	nfa_t tree;
+	place_nfa_t(&tree);
+	vector_type(pnfa_node_t) tree_nodes = vector(pnfa_node_t, 0);
+
+	nfa_t suffixtree;
+	place_nfa_t(&suffixtree);
+	vector_type(pnfa_node_t) suffixtree_nodes = vector(pnfa_node_t, 0);
+
 
 	if (checked_options & mdfa_checked) {
 		mdfa_nodes = brzozowski_minimization_of_nfa(nfa, &mdfa);
@@ -78,6 +85,8 @@ void print_response (nfa_t *nfa) {
 		}
 		if (checked_options & mdfa_search) {
 			separator(mdfa_search);
+			tree_nodes = unroll_dfa(&mdfa, &tree);				// STUB
+			print_nfa(&tree, print_as_mermaid_body_nfa_node);	// STUB
 		}
 	}
 	if (checked_options & suffixmdfa_checked) {
@@ -107,6 +116,10 @@ void print_response (nfa_t *nfa) {
 		if (checked_options & suffixmdfa_mermaid) {
 			separator(suffixmdfa_mermaid);
 			print_nfa(&suffixmdfa, print_as_mermaid_body_nfa_node);
+			//nfa_t search_dfa;
+			//place_nfa_t(&search_dfa);
+			//nfa_to_search_automata(&mdfa, &search_dfa);
+			//print_nfa(&search_dfa, print_as_mermaid_body_nfa_node);
 		}
 		if (checked_options & suffixmdfa_search) {
 			separator(suffixmdfa_search);
@@ -125,5 +138,17 @@ void print_response (nfa_t *nfa) {
 	destroy_vector(pnfa_node_t, &suffixmdfa_nodes);
 	destroy_nfa_t(&suffixmdfa);
 	
+	forall (&tree_nodes, i) {
+		destroy_nfa_node_t(tree_nodes.data[i]);
+	}
+	destroy_vector(pnfa_node_t, &tree_nodes);
+	destroy_nfa_t(&tree);	
+
+	forall (&suffixtree_nodes, i) {
+		destroy_nfa_node_t(suffixtree_nodes.data[i]);
+	}
+	destroy_vector(pnfa_node_t, &suffixtree_nodes);
+	destroy_nfa_t(&suffixtree);	
+
 	#undef separator
 }

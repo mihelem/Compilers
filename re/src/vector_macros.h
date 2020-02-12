@@ -34,6 +34,7 @@ _vector_type *concatenate_##_vector_type (_vector_type *vec, const _vector_type 
 _vector_type *copy_##_vector_type (const _vector_type *source, _vector_type *dest);		\
 type pop_back_##_vector_type (_vector_type *vec);		\
 type *get_##_vector_type (_vector_type *vec, size_t i);	\
+type *back_##_vector_type (_vector_type *vec);	\
 void set_##_vector_type (_vector_type *vec, size_t i, type el);	
 
 #define vector_def(type) vector_def_helper(type, vector_name(type), vector_type(type))

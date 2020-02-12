@@ -42,6 +42,20 @@ void destroy_nfa_t (nfa_t *nfa) {
 	}
 }
 
+nfa_t *destroy_nodes_of_nfa (nfa_t *nfa) {
+	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(nfa, dummy_print_nfa_node);
+	forall (&nodes, i) {
+		destroy_nfa_node_t(nodes.data[i]);
+		free(nodes.data[i]);
+	}
+	destroy_vector(pnfa_node_t, &nodes);
+
+	clear_vector(pnfa_node_t, &nfa->initial);
+	clear_vector(pnfa_node_t, &nfa->final);
+
+	return nfa;
+}
+
 void copy_nfa_t (const nfa_t *source, nfa_t *dest) {
 	if (source && dest) {
 		copy_vector(pnfa_node_t, &source->initial, &dest->initial);
@@ -192,7 +206,7 @@ nfa_t union_nfa (const nfa_t *nfa1, const nfa_t *nfa2) {
 	return nfa;
 }
 
-vector_pnfa_node_t_t dfs_with_action_nfa (const nfa_t *nfa, void (*action) (nfa_node_t *)) {
+vector_pnfa_node_t_t dfs_with_action_nfa (const nfa_t *nfa, void action (nfa_node_t *)) {
 	uint64_t id=0;
 	vector_pnfa_node_t_t visited = vector(pnfa_node_t, 0);
 	vector_pnfa_node_t_t stack = vector(pnfa_node_t, 0);
@@ -417,3 +431,113 @@ vector_type(pnfa_node_t) *set_flags (vector_type(pnfa_node_t) *nodes, uint64_t f
 }
 
 vector_def(nfa_t);
+
+vector_def(vector_type(pnfa_node_t));
+
+nfa_t intersection_nfa (nfa_t *nfa1, nfa_t *nfa2) {
+	vector_type(pnfa_node_t) couples = vector(pnfa_node_t, 0);
+	vector_type(pnfa_node_t) nodes = vector(pnfa_node_t, 0);
+
+	// couple: container for an id couple
+	vector_type(uint64_t) couple = vector(uint64_t, 0);
+	couple.end = 2;
+	uint64_t couple_data[2];
+	couple.data = couple_data;
+
+	nfa_t nfa;
+	place_nfa_t(&nfa);
+
+	uint64_t flags = 0;
+	uint64_t id = 0;
+
+	bytes_t bytes = vector(uint8_t, 0);
+	trie_t ids = trie(1);
+	add_empty_node_to_trie(&ids);
+	uint64_t *new_id;
+
+	pnfa_node_t 
+		node = NULL,
+		node1 = NULL,
+		node2 = NULL,
+		new_node1 = NULL,
+		new_node2 = NULL,
+		new_node = NULL;
+
+	forall (&nfa1->initial, i) {
+		forall (&nfa2->initial, j) {
+			new_node1 = nfa1->initial.data[i];
+			new_node2 = nfa2->initial.data[j];
+
+			push_back_vector(pnfa_node_t, &couples, new_node1);
+			push_back_vector(pnfa_node_t, &couples, new_node2);
+
+			couple_data[0] = new_node1->id;
+			couple_data[1] = new_node2->id;
+			encode_subset_to_bytes(&couple, &bytes);
+
+			new_id = add_subset_to_trie(&ids, &bytes);
+			*new_id = id++;
+
+			flags = new_node1->flags & new_node2->flags;
+			new_node = place_nfa_node_t(malloc(sizeof(nfa_node_t)), flags);
+			new_node->id = *new_id;
+			push_back_vector(pnfa_node_t, &nodes, new_node);
+
+			add_nfa_initial(&nfa, new_node);
+			if (flags & flag_nfa_node_final) {
+				add_nfa_final(&nfa, new_node);
+			}
+		}
+	}
+
+	forall (&nodes, i) {
+		node1 = couples.data[2*i];
+		node2 = couples.data[2*i+1];
+		node = nodes.data[i];
+
+		uint8_t c = 0;
+		do {
+			forall (node1->out+c, j) {
+				new_node1 = node1->out[c].data[j];
+				forall (node2->out+c, k) {
+					new_node2 = node2->out[c].data[k];
+
+					couple_data[0] = new_node1->id;
+					couple_data[1] = new_node2->id;
+
+					clear_vector(uint8_t, &bytes);
+					encode_subset_to_bytes(&couple, &bytes);
+
+					new_id = add_subset_to_trie(&ids, &bytes);
+
+					if (*new_id = ~0) {
+						*new_id = id++;
+
+						flags = new_node1->flags & new_node2->flags;
+
+						new_node = place_nfa_node_t(malloc(sizeof(nfa_node_t)), flags);
+						new_node->id = *new_id;
+						if (flags & flag_nfa_node_final) {
+							add_nfa_final(&nfa, new_node);
+						}
+						push_back_vector(pnfa_node_t, &nodes, new_node);
+
+						push_back_vector(pnfa_node_t, &couples, new_node1);
+						push_back_vector(pnfa_node_t, &couples, new_node2);
+					} else {
+						new_node = nodes.data[*new_id];
+					}
+					add_nfa_edge(nodes.data[i], new_node, c);
+				}
+			}
+
+		} while (c++ != 255);
+	}
+
+	destroy_vector(pnfa_node_t, &couples);
+	destroy_vector(pnfa_node_t, &nodes);
+	destroy_vector(uint8_t, &bytes);
+	destroy_trie(&ids);
+
+	return nfa;
+}

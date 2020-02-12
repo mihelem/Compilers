@@ -1,7 +1,6 @@
 #include "nfa_coder.h"
 
 //vector_type(pnfa_node_t) empty_trans_closure (nfa_t *nfa_in, nfa_t *nfa_out)
-//vector_type(pnfa_node_t) unroll_nfa (nfa_t *nfa, nfa_t *tree)
 
 string_t *dfa_node_goto_coder (string_t *code, nfa_node_t *node, const char *input) {
 	char temp_buffer[50];
@@ -84,7 +83,6 @@ char *dfa_goto_coder (nfa_t *dfa, const char *name, const char *input) {
 			"vector(accepting_state_t, 0);\n"
 		"\n"));
 
-
 	string_t buffer;
 	place_string_t(&buffer);
 	forall (&nodes, i) {
@@ -95,4 +93,73 @@ char *dfa_goto_coder (nfa_t *dfa, const char *name, const char *input) {
 
 	destroy_string_t(&buffer);
 	return cstringify_string_t(&code);
+}
+
+// Assuming a non-empty DFA
+// will unroll only if the DFA is acyclic
+// NOTE: this can be implemented with dfs_with_action if we substitute
+//		 the function pointer with a macro templated struct with 
+//		 function pointer inside: is it worth the effort?
+#define flag_nfa_node_visiting 8
+vector_type(pnfa_node_t) unroll_dfa (nfa_t *dag, nfa_t *tree) {
+	place_nfa_t(tree);
+
+	vector_type(pnfa_node_t) nodes = vector(pnfa_node_t, 0);
+	vector_type(pnfa_node_t) stack_dag = vector(pnfa_node_t, 0);
+	vector_type(pnfa_node_t) stack_tree = vector(pnfa_node_t, 0);
+
+	uint64_t id = 0;
+	push_back_vector(pnfa_node_t, &nodes, place_nfa_node_t(malloc(sizeof(nfa_node_t)), dag->initial.data[0]->flags));
+	push_back_vector(pnfa_node_t, &stack_dag, dag->initial.data[0]);
+	push_back_vector(pnfa_node_t, &stack_tree, nodes.data[0]);
+
+	nfa_node_t *dag_node;
+	nfa_node_t *tree_node;
+	nfa_node_t *new_node;
+	while (!is_empty_vector(pnfa_node_t, &stack_dag)) {
+		dag_node = *back_vector(pnfa_node_t, &stack_dag);
+		tree_node = *back_vector(pnfa_node_t, &stack_tree);
+
+		if (dag_node->flags & flag_nfa_node_visiting) {
+			dag_node->flags &= ~flag_nfa_node_visiting;
+			pop_back_vector(pnfa_node_t, &stack_dag);
+			pop_back_vector(pnfa_node_t, &stack_tree);
+		} else {
+			dag_node->flags |= flag_nfa_node_visiting;
+			tree_node->id = id++;
+			uint8_t c = 0;
+			while (c++ != 255) {
+				forall (dag_node->out+c, i) {
+					// NOT A DAG!
+					if (dag_node->out[c].data[i]->flags & flag_nfa_node_visiting) {
+						forall(&nodes, j) {
+							destroy_nfa_node_t(nodes.data[j]);
+						}
+						destroy_vector(pnfa_node_t, &nodes);
+						destroy_vector(pnfa_node_t, &stack_dag);
+						destroy_vector(pnfa_node_t, &stack_tree);
+						return nodes;
+					}
+					push_back_vector(pnfa_node_t, &stack_dag, dag_node->out[c].data[i]);
+					new_node = place_nfa_node_t(
+						malloc(sizeof(nfa_node_t)), 
+						dag_node->out[c].data[i]->flags & flag_nfa_node_final);
+					push_back_vector(pnfa_node_t, &nodes, new_node);
+					push_back_vector(pnfa_node_t, &stack_tree, new_node);
+					add_nfa_edge(tree_node, new_node, c);
+				}
+			}
+		}
+	}
+
+	add_nfa_initial(place_nfa_t(tree), nodes.data[0]);
+	forall (&nodes, i) {
+		if (nodes.data[i]->flags & flag_nfa_node_final) {
+			add_nfa_final(tree, nodes.data[i]);
+		}
+	}
+
+	destroy_vector(pnfa_node_t, &stack_dag);
+	destroy_vector(pnfa_node_t, &stack_tree);
+	return nodes;
 }
