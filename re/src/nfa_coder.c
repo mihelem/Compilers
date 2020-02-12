@@ -2,7 +2,7 @@
 
 //vector_type(pnfa_node_t) empty_trans_closure (nfa_t *nfa_in, nfa_t *nfa_out)
 
-string_t *dfa_node_goto_coder (string_t *code, nfa_node_t *node, const char *input) {
+string_t *dfa_node_goto_coder (string_t code[static 1], nfa_node_t node[static 1], const char *input, const char *default_action) {
 	char temp_buffer[50];
 	clear_string_t(code);
 	cat_bytes_string_t(code, cum_size_literal("node"));
@@ -38,13 +38,14 @@ string_t *dfa_node_goto_coder (string_t *code, nfa_node_t *node, const char *inp
 		cat_cstring_string_t(code, temp_buffer);
 		cat_bytes_string_t(code, cum_size_literal(";\n"));
 	}
-	cat_bytes_string_t(code, 
-		cum_size_literal("\tdefault:\n\t\treturn accepted_states;\n\t}\n"));
+	cat_bytes_string_t(code, cum_size_literal("\tdefault:\n\t\t"));
+	cat_cstring_string_t(code, default_action);
+	cat_bytes_string_t(code, cum_size_literal("\n\t\treturn accepted_states;\n\t}\n"));
 
 	return code;
 }
 
-char *dfa_goto_coder (nfa_t *dfa, const char *name, const char *input) {
+char *dfa_goto_coder (nfa_t dfa[static 1], const char *name, const char *input, const char *default_action) {
 	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(dfa, dummy_print_nfa_node);
 	unset_flags(&nodes, ~flag_nfa_node_visited);
 	string_t code;
@@ -87,7 +88,7 @@ char *dfa_goto_coder (nfa_t *dfa, const char *name, const char *input) {
 	place_string_t(&buffer);
 	forall (&nodes, i) {
 		cat_string_t(&code, 
-			dfa_node_goto_coder(&buffer, nodes.data[i], input));
+			dfa_node_goto_coder(&buffer, nodes.data[i], input, default_action));
 	}
 	cat_bytes_string_t(&code, cum_size_literal("}"));
 
@@ -101,7 +102,7 @@ char *dfa_goto_coder (nfa_t *dfa, const char *name, const char *input) {
 //		 the function pointer with a macro templated struct with 
 //		 function pointer inside: is it worth the effort?
 #define flag_nfa_node_visiting 8
-vector_type(pnfa_node_t) unroll_dfa (nfa_t *dag, nfa_t *tree) {
+vector_type(pnfa_node_t) unroll_dfa (nfa_t dag[static 1], nfa_t tree[static 1]) {
 	place_nfa_t(tree);
 
 	vector_type(pnfa_node_t) nodes = vector(pnfa_node_t, 0);

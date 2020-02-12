@@ -19,15 +19,15 @@ final class RegExp {
 
 
 	function __construct(
-		$_regexp,
-		$_nonce,
-		$_options,
-		$_roptions)
+		$regexp,
+		$nonce,
+		$options,
+		$roptions)
 	{
-		$this->regexp = $_regexp;
-		$this->nonce = $_nonce;
-		$this->options = $_options;
-		$this->roptions = $_roptions;
+		$this->regexp = $regexp;
+		$this->nonce = $nonce;
+		$this->options = $options;
+		$this->roptions = $roptions;
 		$this->filename = self::REGEXPFILE.$this->nonce;
 	}
 

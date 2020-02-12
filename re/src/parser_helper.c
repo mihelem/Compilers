@@ -4,10 +4,10 @@ static uint64_t checked_options;
 static const uint64_t 
 	mdfa_mermaid = 1, 
 	mdfa_gotocode = 2, 
-	mdfa_search = 4, 
-	suffixmdfa_mermaid = 8, 
-	suffixmdfa_gotocode = 16, 
-	suffixmdfa_search = 32;
+	mdfa_match = 4, 
+	searchmdfa_mermaid = 8, 
+	searchmdfa_gotocode = 16, 
+	searchmdfa_match = 32;
 
 // (memory unsafe)
 void set_options_from_command_line(int argc, char **argv) {
@@ -16,30 +16,30 @@ void set_options_from_command_line(int argc, char **argv) {
 	for (int i=1; i<argc; ++i) {
 		switch (argv[i][0]) {
 		case 'm':
-			switch (argv[i][5]) {
-			case 'g':
+			switch (argv[i][6]) {
+			case 'o':
 				checked_options |= mdfa_gotocode;
 				break;
-			case 'm':
+			case 'e':
 				checked_options |= mdfa_mermaid;
 				break;
-			case 's':
-				checked_options |= mdfa_search;
+			case 'a':
+				checked_options |= mdfa_match;
 				break;
 			default:
 				break;
 			}
 			break;
 		case 's':
-			switch (argv[i][11]) {
-			case 'g':
-				checked_options |= suffixmdfa_gotocode;
+			switch (argv[i][12]) {
+			case 'o':
+				checked_options |= searchmdfa_gotocode;
 				break;
-			case 'm':
-				checked_options |= suffixmdfa_mermaid;
+			case 'e':
+				checked_options |= searchmdfa_mermaid;
 				break;
-			case 's':
-				checked_options |= suffixmdfa_search;
+			case 'a':
+				checked_options |= searchmdfa_match;
 				break;
 			default:
 				break;
@@ -51,8 +51,8 @@ void set_options_from_command_line(int argc, char **argv) {
 }
 
 void print_response (nfa_t *nfa) {
-	static const uint64_t mdfa_checked = mdfa_gotocode | mdfa_mermaid | mdfa_search;
-	static const uint64_t suffixmdfa_checked = suffixmdfa_gotocode | suffixmdfa_mermaid | suffixmdfa_search;
+	static const uint64_t mdfa_checked = mdfa_gotocode | mdfa_mermaid | mdfa_match;
+	static const uint64_t searchmdfa_checked = searchmdfa_gotocode | searchmdfa_mermaid | searchmdfa_match;
 	
 	#define separator(nfa_name) printf("\n~~~~~~~~~~\n" #nfa_name "\n")
 
@@ -60,69 +60,51 @@ void print_response (nfa_t *nfa) {
 	place_nfa_t(&mdfa);
 	vector_type(pnfa_node_t) mdfa_nodes = vector(pnfa_node_t, 0);
 
-	nfa_t suffixmdfa;
-	place_nfa_t(&suffixmdfa);
-	vector_type(pnfa_node_t) suffixmdfa_nodes = vector(pnfa_node_t, 0);
-
-	nfa_t tree;
-	place_nfa_t(&tree);
-	vector_type(pnfa_node_t) tree_nodes = vector(pnfa_node_t, 0);
-
-	nfa_t suffixtree;
-	place_nfa_t(&suffixtree);
-	vector_type(pnfa_node_t) suffixtree_nodes = vector(pnfa_node_t, 0);
-
+	nfa_t searchmdfa;
+	place_nfa_t(&searchmdfa);
+	vector_type(pnfa_node_t) searchmdfa_nodes = vector(pnfa_node_t, 0);
 
 	if (checked_options & mdfa_checked) {
 		mdfa_nodes = brzozowski_minimization_of_nfa(nfa, &mdfa);
 		if (checked_options & mdfa_gotocode) {
 			separator(mdfa_gotocode);
-			printf("%s\n", dfa_goto_coder(&mdfa, "printer", "getchar"));
+			printf("%s\n", dfa_goto_coder(&mdfa, "printer", "getchar", ""));
 		}
 		if (checked_options & mdfa_mermaid) {
 			separator(mdfa_mermaid);
 			print_nfa(&mdfa, print_as_mermaid_body_nfa_node);
 		}
-		if (checked_options & mdfa_search) {
-			separator(mdfa_search);
-			tree_nodes = unroll_dfa(&mdfa, &tree);				// STUB
-			print_nfa(&tree, print_as_mermaid_body_nfa_node);	// STUB
+		if (checked_options & mdfa_match) {
+			separator(mdfa_match);
 		}
 	}
-	if (checked_options & suffixmdfa_checked) {
-		nfa_t suffixnfa;
-		place_nfa_t(&suffixnfa);
-		vector_type(pnfa_node_t) nodes = vector(pnfa_node_t, 0);
+	if (checked_options & searchmdfa_checked) {
+		nfa_t *source = 
+			checked_options & mdfa_checked
+			? &mdfa
+			: nfa;
 
-		if (checked_options & mdfa_checked) {
-			copy_nfa_t(&mdfa, &suffixnfa);
-			destroy_vector(pnfa_node_t, &suffixnfa.initial);
-			copy_vector(pnfa_node_t, &mdfa_nodes, &suffixnfa.initial);
-		} else {
-			copy_nfa_t(nfa, &suffixnfa);
-			destroy_vector(pnfa_node_t, &suffixnfa.initial);
-			suffixnfa.initial = dfs_with_action_nfa(nfa, dummy_print_nfa_node);
-		}
-		set_flags(&suffixnfa.initial, flag_nfa_node_initial);
-		unset_flags(&suffixnfa.initial, ~flag_nfa_node_visited);
+		nfa_t searchnfa;
+		place_nfa_t(&searchnfa);
+		vector_type(pnfa_node_t) searchnfa_nodes = nfa_to_search_automata(source, &searchnfa);
+		searchmdfa_nodes = brzozowski_minimization_of_nfa(&searchnfa, &searchmdfa);
 
-		suffixmdfa_nodes = brzozowski_minimization_of_nfa(&suffixnfa, &suffixmdfa);
-		destroy_nfa_t(&suffixnfa);
-
-		if (checked_options & suffixmdfa_gotocode) {
-			separator(suffixmdfa_gotocode);
-			printf("%s\n", dfa_goto_coder(&suffixmdfa, "printer", "getchar"));
+		forall (&searchnfa_nodes, i) {
+			destroy_nfa_node_t(searchnfa_nodes.data[i]);
 		}
-		if (checked_options & suffixmdfa_mermaid) {
-			separator(suffixmdfa_mermaid);
-			print_nfa(&suffixmdfa, print_as_mermaid_body_nfa_node);
-			//nfa_t search_dfa;
-			//place_nfa_t(&search_dfa);
-			//nfa_to_search_automata(&mdfa, &search_dfa);
-			//print_nfa(&search_dfa, print_as_mermaid_body_nfa_node);
+		destroy_vector(pnfa_node_t, &searchnfa_nodes);
+		destroy_nfa_t(&searchnfa);
+		
+		if (checked_options & searchmdfa_gotocode) {
+			separator(searchmdfa_gotocode);
+			printf("%s\n", dfa_goto_coder(&searchmdfa, "printer", "getchar", "goto node0;"));
 		}
-		if (checked_options & suffixmdfa_search) {
-			separator(suffixmdfa_search);
+		if (checked_options & searchmdfa_mermaid) {
+			separator(searchmdfa_mermaid);
+			print_nfa(&searchmdfa, print_as_mermaid_body_nfa_node);
+		}
+		if (checked_options & searchmdfa_match) {
+			separator(searchmdfa_match);
 		}
 	}
  
@@ -132,23 +114,11 @@ void print_response (nfa_t *nfa) {
 	destroy_vector(pnfa_node_t, &mdfa_nodes);
 	destroy_nfa_t(&mdfa);
 
-	forall (&suffixmdfa_nodes, i) {
-		destroy_nfa_node_t(suffixmdfa_nodes.data[i]);
+	forall (&searchmdfa_nodes, i) {
+		destroy_nfa_node_t(searchmdfa_nodes.data[i]);
 	}
-	destroy_vector(pnfa_node_t, &suffixmdfa_nodes);
-	destroy_nfa_t(&suffixmdfa);
-	
-	forall (&tree_nodes, i) {
-		destroy_nfa_node_t(tree_nodes.data[i]);
-	}
-	destroy_vector(pnfa_node_t, &tree_nodes);
-	destroy_nfa_t(&tree);	
-
-	forall (&suffixtree_nodes, i) {
-		destroy_nfa_node_t(suffixtree_nodes.data[i]);
-	}
-	destroy_vector(pnfa_node_t, &suffixtree_nodes);
-	destroy_nfa_t(&suffixtree);	
+	destroy_vector(pnfa_node_t, &searchmdfa_nodes);
+	destroy_nfa_t(&searchmdfa);
 
 	#undef separator
 }

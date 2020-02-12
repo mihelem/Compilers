@@ -23,7 +23,7 @@ extern const uint64_t uint64_1;
 
 #define DBG printf("%s :: %d\n", __FILE__, __LINE__);
 
-#define cum_size_literal(literal) cum_size_literal_helper(literal, sizeof (literal)-1)
+#define cum_size_literal(literal) cum_size_literal_helper(sizeof (literal)-1, literal)
 #define cum_size_literal_helper(...) __VA_ARGS__
 
 #endif

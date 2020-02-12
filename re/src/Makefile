@@ -1,7 +1,7 @@
 LEX?=flex
 YACC?=bison
 YFLAGS?=-d
-CFLAGS?=-g3
+CFLAGS?=-O3 -Wall
 
 all: ../web/bin/scangen
 

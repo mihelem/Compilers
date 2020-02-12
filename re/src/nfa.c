@@ -1,48 +1,56 @@
 /* Author: Michele Miccinesi 02022020 	*/
 #include "nfa.h"
 
-vector_def(pnfa_node_t)
+vector_def(pnfa_node_t);
 
-nfa_node_t *place_nfa_node_t(nfa_node_t *node, uint64_t flags) {
+nfa_node_t *place_nfa_node_t(nfa_node_t *node, const uint64_t flags) {
+	if (!node) {
+		perror("place_nfa_node_t on NULL\n");
+		exit(EXIT_FAILURE);
+	}
 	node->id = 0;
 	node->flags = flags;
 	node->out = calloc(256, sizeof(vector_pnfa_node_t_t));
+	if (!node->out) {
+		perror("MEMORY SHORTAGE\n");
+		exit(EXIT_FAILURE);
+	}
 
 	return node;
 }
 
-nfa_node_t make_nfa_node_t(uint64_t flags) {
+nfa_node_t make_nfa_node_t(const uint64_t flags) {
 	nfa_node_t node;
 	place_nfa_node_t(&node, flags);
 
 	return node;
 }
 
-void destroy_nfa_node_t (nfa_node_t* node) {
-	if (node && node->out) {
-		for( int i=0; i<256; ++i ) {
-			destroy_vector(pnfa_node_t, node->out+i);
-		}
-		free(node->out);
-		node->out = NULL;
+void destroy_nfa_node_t (nfa_node_t node[static 1]) {
+	for( int i=0; i<256; ++i ) {
+		destroy_vector(pnfa_node_t, node->out+i);
 	}
+	free(node->out);
+	node->out = NULL;
 }
 
 nfa_t *place_nfa_t (nfa_t *nfa) {
+	if (!nfa) {
+		perror("place_nfa_t on NULL\n");
+		exit(EXIT_FAILURE);
+	}
 	nfa->initial = vector(pnfa_node_t, 0);
 	nfa->final = vector(pnfa_node_t, 0);
 
 	return nfa;
 }
 
-void destroy_nfa_t (nfa_t *nfa) {
-	if (nfa) {
-		destroy_vector(pnfa_node_t, &nfa->initial);
-		destroy_vector(pnfa_node_t, &nfa->final);
-	}
+void destroy_nfa_t (nfa_t nfa[static 1]) {
+	destroy_vector(pnfa_node_t, &nfa->initial);
+	destroy_vector(pnfa_node_t, &nfa->final);
 }
 
-nfa_t *destroy_nodes_of_nfa (nfa_t *nfa) {
+nfa_t *destroy_nodes_of_nfa (nfa_t nfa[static 1]) {
 	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(nfa, dummy_print_nfa_node);
 	forall (&nodes, i) {
 		destroy_nfa_node_t(nodes.data[i]);
@@ -56,42 +64,32 @@ nfa_t *destroy_nodes_of_nfa (nfa_t *nfa) {
 	return nfa;
 }
 
-void copy_nfa_t (const nfa_t *source, nfa_t *dest) {
-	if (source && dest) {
-		copy_vector(pnfa_node_t, &source->initial, &dest->initial);
-		copy_vector(pnfa_node_t, &source->final, &dest->final);
-	}
+void copy_nfa_t (const nfa_t source[static 1], nfa_t dest[static 1]) {
+	copy_vector(pnfa_node_t, &source->initial, &dest->initial);
+	copy_vector(pnfa_node_t, &source->final, &dest->final);
 }
 
-void add_nfa_edge (nfa_node_t *source, nfa_node_t *dest, uint8_t literal) {
+void add_nfa_edge (nfa_node_t source[static 1], nfa_node_t dest[static 1], const uint8_t literal) {
 	push_back_vector(pnfa_node_t, source->out+literal, dest);
 }
 
-void add_nfa_initial (nfa_t *nfa, nfa_node_t *initial) {
+void add_nfa_initial (nfa_t nfa[static 1], nfa_node_t initial[static 1]) {
 	push_back_vector(pnfa_node_t, &nfa->initial, initial);
 }
 
-void add_nfa_final (nfa_t *nfa, nfa_node_t *final) {
+void add_nfa_final (nfa_t nfa[static 1], nfa_node_t final[static 1]) {
 	push_back_vector(pnfa_node_t, &nfa->final, final);
 }
 
-void clear_nfa_initial (nfa_t *nfa) {
+void clear_nfa_initial (nfa_t nfa[static 1]) {
 	clear_vector(pnfa_node_t, &nfa->initial);
 }
 
-void clear_nfa_final (nfa_t *nfa) {
+void clear_nfa_final (nfa_t nfa[static 1]) {
 	clear_vector(pnfa_node_t, &nfa->final);
 }
-// '\0' is the label of the empty transistion
-nfa_node_t *literal_to_nfa_helper (nfa_node_t *initial, nfa_node_t *final, uint8_t c) {
-	nfa_node_t *node = place_nfa_node_t(malloc(sizeof(nfa_node_t)), 0);
-	add_nfa_edge(initial, node, c);
-	add_nfa_edge(node, final, 0);
 
-	return node;
-}
-
-nfa_t range_to_nfa (range_t *range) {
+nfa_t range_to_nfa (range_t range[static 1]) {
 	nfa_t nfa;
 	place_nfa_t(&nfa);
 
@@ -102,25 +100,25 @@ nfa_t range_to_nfa (range_t *range) {
 	nfa_node_t *final = place_nfa_node_t(malloc(sizeof(nfa_node_t)), 0);
 
 	while (n--) {
-		literal_to_nfa_helper(initial, final, s[n]);
+		add_nfa_edge(initial, final, s[n]);
 	}
 
 	add_nfa_initial(&nfa, initial);
 	add_nfa_final(&nfa, final);
 
-
 	vector_type(pnfa_node_t) nodes = setup_nodes_from_nfa(&nfa);
 	destroy_vector(pnfa_node_t, &nodes); 
 	return nfa;
 }
 
-nfa_t literal_to_nfa (uint8_t literal) {
+nfa_t literal_to_nfa (const uint8_t literal) {
 	nfa_t nfa;
 	place_nfa_t(&nfa);
 
 	nfa_node_t *initial = place_nfa_node_t(malloc(sizeof(nfa_node_t)), 0);
 	nfa_node_t *final = place_nfa_node_t(malloc(sizeof(nfa_node_t)), 0);
-	nfa_node_t *node = literal_to_nfa_helper(initial, final, literal);
+	add_nfa_edge(initial, final, literal);
+	//nfa_node_t *node = literal_to_nfa_helper(initial, final, literal);
 
 	add_nfa_initial(&nfa, initial);
 	add_nfa_final(&nfa, final);
@@ -130,7 +128,7 @@ nfa_t literal_to_nfa (uint8_t literal) {
 	return nfa;
 }
 
-nfa_t *make_monoextremal_nfa (nfa_t *nfa) {
+nfa_t *make_monoextremal_nfa (nfa_t nfa[static 1]) {
 	nfa_node_t *initial = place_nfa_node_t(malloc(sizeof(nfa_node_t)), 0);
 	for ( size_t i=nfa->initial.begin; i<nfa->initial.end; ++i) {
 		add_nfa_edge(initial, nfa->initial.data[i], 0); 
@@ -151,7 +149,7 @@ nfa_t *make_monoextremal_nfa (nfa_t *nfa) {
 	return nfa;
 }
 
-nfa_t *make_avoidable_nfa (nfa_t *nfa) {
+nfa_t *make_avoidable_nfa (nfa_t nfa[static 1]) {
 	make_monoextremal_nfa(nfa);
 	add_nfa_edge(nfa->initial.data[0], nfa->final.data[0], 0);
 
@@ -160,7 +158,7 @@ nfa_t *make_avoidable_nfa (nfa_t *nfa) {
 	return nfa;
 }
 
-nfa_t *make_repeatable_nfa (nfa_t *nfa) {
+nfa_t *make_repeatable_nfa (nfa_t nfa[static 1]) {
 	make_monoextremal_nfa(nfa);
 	add_nfa_edge(nfa->final.data[0], nfa->initial.data[0], 0);
 
@@ -169,7 +167,7 @@ nfa_t *make_repeatable_nfa (nfa_t *nfa) {
 	return nfa;
 }
 
-nfa_t concatenation_nfa (const nfa_t *nfa_old1, const nfa_t *nfa_old2) {
+nfa_t concatenation_nfa (const nfa_t nfa_old1[static 1], const nfa_t nfa_old2[static 1]) {
 	nfa_t nfa1, nfa2;
 	place_nfa_t(&nfa1);
 	place_nfa_t(&nfa2);
@@ -192,7 +190,7 @@ nfa_t concatenation_nfa (const nfa_t *nfa_old1, const nfa_t *nfa_old2) {
 	return nfa1;
 }
 
-nfa_t union_nfa (const nfa_t *nfa1, const nfa_t *nfa2) {
+nfa_t union_nfa (const nfa_t nfa1[static 1], const nfa_t nfa2[static 1]) {
 	nfa_t nfa;
 	place_nfa_t(&nfa);
 	copy_nfa_t(nfa1, &nfa);
@@ -206,7 +204,7 @@ nfa_t union_nfa (const nfa_t *nfa1, const nfa_t *nfa2) {
 	return nfa;
 }
 
-vector_pnfa_node_t_t dfs_with_action_nfa (const nfa_t *nfa, void action (nfa_node_t *)) {
+vector_pnfa_node_t_t dfs_with_action_nfa (nfa_t nfa[static 1], void action (nfa_node_t *)) {
 	uint64_t id=0;
 	vector_pnfa_node_t_t visited = vector(pnfa_node_t, 0);
 	vector_pnfa_node_t_t stack = vector(pnfa_node_t, 0);
@@ -248,7 +246,7 @@ vector_pnfa_node_t_t dfs_with_action_nfa (const nfa_t *nfa, void action (nfa_nod
 	return visited;
 }
 
-void print_nfa_node (nfa_node_t *node) {
+void print_nfa_node (nfa_node_t node[static 1]) {
 	vector_pnfa_node_t_t *out = NULL;
 
 	printf("NODE %ld %s%s\n\n", 
@@ -266,8 +264,8 @@ void print_nfa_node (nfa_node_t *node) {
 	printf("\n");
 }
 
-void print_as_mermaid_body_nfa_node (nfa_node_t *node) {
-	vector_pnfa_node_t_t *out = NULL;
+void print_as_mermaid_body_nfa_node (nfa_node_t node[static 1]) {
+	vector_type(pnfa_node_t) *out = NULL;
 
 	switch (node->flags & (flag_nfa_node_initial|flag_nfa_node_final)) {
 	case 0:
@@ -308,17 +306,13 @@ void print_as_mermaid_body_nfa_node (nfa_node_t *node) {
 	}
 }
 
-void dummy_print_nfa_node (nfa_node_t *node) {}
+void dummy_print_nfa_node (nfa_node_t *_node) {}
 
-void clean_flags_of_nfa_node (nfa_node_t *node) {
+void clean_flags_of_nfa_node (nfa_node_t node[static 1]) {
 	node->flags &= flag_nfa_node_visited;
 }
 
-void print_nfa (const nfa_t *nfa, void (*printer) (nfa_node_t *)) {
-	if (!nfa) {
-		return;
-	}
-
+void print_nfa (nfa_t nfa[static 1], void printer (nfa_node_t *)) {
 	if (printer == print_as_mermaid_body_nfa_node) {
 		//printf("{{#mermaid:graph TD\n"); //for mediawiki
 		printf("graph TD\n");
@@ -337,7 +331,7 @@ void print_nfa (const nfa_t *nfa, void (*printer) (nfa_node_t *)) {
 	destroy_vector(pnfa_node_t, &visited);
 }
 
-vector_type(pnfa_node_t) get_copy_of_nodes (vector_type(pnfa_node_t) *node_ptrs) {
+vector_type(pnfa_node_t) get_copy_of_nodes (const vector_type(pnfa_node_t) node_ptrs[static 1]) {
 	vector_type(pnfa_node_t) nodes = vector(pnfa_node_t, node_ptrs->end-node_ptrs->begin);
 	forall (node_ptrs, i) {
 		nodes.data[i] = place_nfa_node_t(malloc(sizeof(nfa_node_t)), 0);
@@ -349,7 +343,7 @@ vector_type(pnfa_node_t) get_copy_of_nodes (vector_type(pnfa_node_t) *node_ptrs)
 	return nodes;
 }
 
-vector_type(pnfa_node_t) get_copy_with_edges_of_nodes (vector_type(pnfa_node_t) *node_ptrs) {
+vector_type(pnfa_node_t) get_copy_with_edges_of_nodes (const vector_type(pnfa_node_t) node_ptrs[static 1]) {
 	vector_type(pnfa_node_t) nodes = get_copy_of_nodes(node_ptrs);
 
 	forall (node_ptrs, i) {
@@ -365,7 +359,7 @@ vector_type(pnfa_node_t) get_copy_with_edges_of_nodes (vector_type(pnfa_node_t) 
 	return nodes;
 }
 
-void print_nodes (vector_type(pnfa_node_t) *nodes) {
+void print_nodes (vector_type(pnfa_node_t) nodes[static 1]) {
 	forall(nodes, i) {
 		printf("i:%ld -- id:%ld\n", i, nodes->data[i]->id);
 		uint8_t c = 0;
@@ -378,15 +372,15 @@ void print_nodes (vector_type(pnfa_node_t) *nodes) {
 	}
 }
 
-vector_type(pnfa_node_t) setup_nodes_from_nfa (nfa_t *_nfa) {
-	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(_nfa, clean_flags_of_nfa_node);
-	set_extremality_flags(_nfa);	
+vector_type(pnfa_node_t) setup_nodes_from_nfa (nfa_t nfa[static 1]) {
+	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(nfa, clean_flags_of_nfa_node);
+	set_extremality_flags(nfa);	
 	unset_flags(&nodes, ~flag_nfa_node_visited);
 
 	return nodes;
 }
 
-vector_type(pnfa_node_t) *setup_nfa_from_nodes (nfa_t *nfa, vector_type(pnfa_node_t) *nodes) {
+vector_type(pnfa_node_t) *setup_nfa_from_nodes (nfa_t nfa[static 1], vector_type(pnfa_node_t) nodes[static 1]) {
 	clear_vector(pnfa_node_t, &nfa->initial);
 	clear_vector(pnfa_node_t, &nfa->final);
 	forall (nodes, i) {
@@ -399,10 +393,9 @@ vector_type(pnfa_node_t) *setup_nfa_from_nodes (nfa_t *nfa, vector_type(pnfa_nod
 	}
 
 	return nodes;
-
 }
 
-nfa_t *set_extremality_flags (nfa_t *nfa) {
+nfa_t *set_extremality_flags (nfa_t nfa[static 1]) {
 	forall(&nfa->initial, i) {
 		nfa->initial.data[i]->flags |= flag_nfa_node_initial;
 	}
@@ -414,7 +407,7 @@ nfa_t *set_extremality_flags (nfa_t *nfa) {
 	return nfa;
 }
 
-vector_type(pnfa_node_t) *unset_flags (vector_type(pnfa_node_t) *nodes, uint64_t flags) {
+vector_type(pnfa_node_t) *unset_flags (vector_type(pnfa_node_t) nodes[static 1], const uint64_t flags) {
 	forall( nodes, i ) {
 		nodes->data[i]->flags &= flags;
 	}
@@ -422,7 +415,7 @@ vector_type(pnfa_node_t) *unset_flags (vector_type(pnfa_node_t) *nodes, uint64_t
 	return nodes;
 }
 
-vector_type(pnfa_node_t) *set_flags (vector_type(pnfa_node_t) *nodes, uint64_t flags) {
+vector_type(pnfa_node_t) *set_flags (vector_type(pnfa_node_t) nodes[static 1], const uint64_t flags) {
 	forall( nodes, i ) {
 		nodes->data[i]->flags |= flags;
 	}
@@ -430,11 +423,47 @@ vector_type(pnfa_node_t) *set_flags (vector_type(pnfa_node_t) *nodes, uint64_t f
 	return nodes;	
 }
 
+nfa_t *apply_flags_to_nfa (nfa_t nfa[static 1], const uint64_t flags, const uint64_t unflags) {
+	vector_type(pnfa_node_t) nodes =
+		dfs_with_action_nfa(nfa, dummy_print_nfa_node);
+
+	clear_vector(pnfa_node_t, &nfa->initial);
+	clear_vector(pnfa_node_t, &nfa->final);
+	forall (&nodes, i) {
+		nodes.data[i]->flags |= flags;
+		nodes.data[i]->flags &= unflags;
+		if (nodes.data[i]->flags & flag_nfa_node_final) {
+			push_back_vector(pnfa_node_t, &nfa->final, nodes.data[i]);
+		}
+		if (nodes.data[i]->flags & flag_nfa_node_initial) {
+			push_back_vector(pnfa_node_t, &nfa->initial, nodes.data[i]);
+		}
+	}
+	destroy_vector(pnfa_node_t, &nodes);
+
+	return nfa;
+}
+
+vector_type(pnfa_node_t) *make_unique_nfa_nodes (vector_type(pnfa_node_t) nodes[static 1]) {
+	unset_flags(nodes, ~flag_nfa_node_visited);
+	size_t j = nodes->begin;
+	forall(nodes, i) {
+		if (nodes->data[i]->flags & flag_nfa_node_visited) {
+			continue;
+		}
+		nodes->data[i]->flags |= flag_nfa_node_visited;
+		nodes->data[j++] = nodes->data[i];
+	}
+	nodes->end = j;
+
+	return nodes;
+}
+
 vector_def(nfa_t);
 
 vector_def(vector_type(pnfa_node_t));
 
-nfa_t intersection_nfa (nfa_t *nfa1, nfa_t *nfa2) {
+nfa_t intersection_nfa (const nfa_t nfa1[static 1], const nfa_t nfa2[static 1]) {
 	vector_type(pnfa_node_t) couples = vector(pnfa_node_t, 0);
 	vector_type(pnfa_node_t) nodes = vector(pnfa_node_t, 0);
 
@@ -474,6 +503,7 @@ nfa_t intersection_nfa (nfa_t *nfa1, nfa_t *nfa2) {
 			couple_data[0] = new_node1->id;
 			couple_data[1] = new_node2->id;
 			encode_subset_to_bytes(&couple, &bytes);
+			
 
 			new_id = add_subset_to_trie(&ids, &bytes);
 			*new_id = id++;
@@ -494,7 +524,7 @@ nfa_t intersection_nfa (nfa_t *nfa1, nfa_t *nfa2) {
 		node1 = couples.data[2*i];
 		node2 = couples.data[2*i+1];
 		node = nodes.data[i];
-
+		
 		uint8_t c = 0;
 		do {
 			forall (node1->out+c, j) {
@@ -504,13 +534,13 @@ nfa_t intersection_nfa (nfa_t *nfa1, nfa_t *nfa2) {
 
 					couple_data[0] = new_node1->id;
 					couple_data[1] = new_node2->id;
-
+					
 					clear_vector(uint8_t, &bytes);
 					encode_subset_to_bytes(&couple, &bytes);
 
 					new_id = add_subset_to_trie(&ids, &bytes);
 
-					if (*new_id = ~0) {
+					if (*new_id == ~0) {
 						*new_id = id++;
 
 						flags = new_node1->flags & new_node2->flags;
@@ -527,7 +557,7 @@ nfa_t intersection_nfa (nfa_t *nfa1, nfa_t *nfa2) {
 					} else {
 						new_node = nodes.data[*new_id];
 					}
-					add_nfa_edge(nodes.data[i], new_node, c);
+					add_nfa_edge(node, new_node, c);
 				}
 			}
 

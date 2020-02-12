@@ -44,12 +44,12 @@
 	}
 
 #define heap_def_header(type, cmp, cmp_name) \
-type *heapify_##cmp_name##_##type ( type *data, const size_t n );	\
-type *heapify_new_top_##cmp_name##_##type ( type *data, const size_t n );	\
-type *heap_sort_##cmp_name##_##type ( type *data, size_t n );	\
+type *heapify_##cmp_name##_##type ( const size_t n, type data[n]  );	\
+type *heapify_new_top_##cmp_name##_##type ( const size_t n, type data[n] );	\
+type *heap_sort_##cmp_name##_##type ( size_t n, type data[n] );	\
 
 #define heap_def(type, cmp, cmp_name) \
-type *heapify_##cmp_name##_##type ( type *data, const size_t n ) {	\
+type *heapify_##cmp_name##_##type ( const size_t n, type data[n] ) {	\
 	if ( n<2 ) {	\
 		return data;	\
 	}	\
@@ -80,7 +80,7 @@ type *heapify_##cmp_name##_##type ( type *data, const size_t n ) {	\
 	return data+1;	\
 }	\
 \
-type *heapify_new_top_##cmp_name##_##type ( type *data, const size_t n ) {	\
+type *heapify_new_top_##cmp_name##_##type ( const size_t n, type data[n] ) {	\
 	--data;	\
 	type temp;	\
 	\
@@ -97,25 +97,25 @@ type *heapify_new_top_##cmp_name##_##type ( type *data, const size_t n ) {	\
 	return data+1;	\
 }	\
 \
-type *heap_sort_##cmp_name##_##type ( type *data, size_t n ) {	\
+type *heap_sort_##cmp_name##_##type ( size_t n, type data[n] ) {	\
 	type temp;	\
 	while ( n-->0 ) {	\
 		swap( data[0], data[n], temp );	\
-		heapify_new_top_##cmp_name##_##type ( data, n );		\
+		heapify_new_top_##cmp_name##_##type ( n, data );		\
 	}	\
 	return data;	\
 }
 
 #define heapify(type, cmp_name, data, size) heapify_helper(type, cmp_name, data, size)
 #define heapify_helper(type, cmp_name, data, size) heapify_parameter_expander(type, cmp_name, data, size)
-#define heapify_parameter_expander(type, cmp_name, data, size) heapify_##cmp_name##_##type (data, size)
+#define heapify_parameter_expander(type, cmp_name, data, size) heapify_##cmp_name##_##type (size, data)
 
 #define heapify_new_top(type, cmp_name, data, size) heapify_new_top_helper(type, cmp_name, data, size)
 #define heapify_new_top_helper(type, cmp_name, data, size) heapify_new_top_parameter_expander(type, cmp_name, data, size)
-#define heapify_new_top_parameter_expander(type, cmp_name, data, size) heapify_new_top_##cmp_name##_##type (data, size)
+#define heapify_new_top_parameter_expander(type, cmp_name, data, size) heapify_new_top_##cmp_name##_##type (size, data)
 
 #define heap_sort(type, cmp_name, data, size) heap_sort_helper(type, cmp_name, data, size)
 #define heap_sort_helper(type, cmp_name, data, size) heap_sort_parameter_expander(type, cmp_name, data, size)
-#define heap_sort_parameter_expander(type, cmp_name, data, size) heap_sort_##cmp_name##_##type(data, size)
+#define heap_sort_parameter_expander(type, cmp_name, data, size) heap_sort_##cmp_name##_##type(size, data)
 
 #endif

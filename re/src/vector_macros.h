@@ -25,17 +25,17 @@ typedef struct _vector_name { \
 } _vector_type; \
 \
 _vector_type new_##_vector_type (const size_t capacity);	\
-bool is_empty_##_vector_type (const _vector_type *vec);		\
-_vector_type *clear_##_vector_type (_vector_type *vec);		\
-_vector_type *destroy_##_vector_type (_vector_type *vec);	\
-_vector_type *expand_back_##_vector_type (_vector_type *vec);	\
-_vector_type *push_back_##_vector_type (_vector_type *vec, type el);	\
-_vector_type *concatenate_##_vector_type (_vector_type *vec, const _vector_type *vec1);	\
-_vector_type *copy_##_vector_type (const _vector_type *source, _vector_type *dest);		\
-type pop_back_##_vector_type (_vector_type *vec);		\
-type *get_##_vector_type (_vector_type *vec, size_t i);	\
-type *back_##_vector_type (_vector_type *vec);	\
-void set_##_vector_type (_vector_type *vec, size_t i, type el);	
+bool is_empty_##_vector_type (const _vector_type vec[static 1]);		\
+_vector_type *clear_##_vector_type (_vector_type vec[static 1]);		\
+_vector_type *destroy_##_vector_type (_vector_type vec[static 1]);	\
+_vector_type *expand_back_##_vector_type (_vector_type vec[static 1]);	\
+_vector_type *push_back_##_vector_type (_vector_type vec[static 1], type const el);	\
+_vector_type *concatenate_##_vector_type (_vector_type vec[static 1], const _vector_type vec1[static 1]);	\
+_vector_type *copy_##_vector_type (_vector_type const source[static 1], _vector_type dest[static 1]);		\
+type pop_back_##_vector_type (_vector_type vec[static 1]);		\
+type *get_##_vector_type (_vector_type vec[static 1], const size_t i);	\
+type *back_##_vector_type (_vector_type vec[static 1]);	\
+void set_##_vector_type (_vector_type vec[static 1], const size_t i, type el);	
 
 #define vector_def(type) vector_def_helper(type, vector_name(type), vector_type(type))
 #define vector_def_helper(type, name, vectype) vector_def_param_expander(type, name, vectype)
@@ -43,16 +43,20 @@ void set_##_vector_type (_vector_type *vec, size_t i, type el);
 _vector_type new_##_vector_type (const size_t capacity) { \
 	_vector_type vec;	\
 	vec.data = malloc(sizeof(type)*capacity);	\
-	vec.capacity = vec.data ? capacity : 0;	\
+	if (!vec.data) {	\
+		perror("MEMORY SHORTAGE\n");	\
+		exit(EXIT_FAILURE);	\
+	}	\
+	vec.capacity = capacity;	\
 	vec.begin = vec.end = 0;	\
 	return vec; \
 }	\
 \
-bool is_empty_##_vector_type (const _vector_type *vec) {	\
+bool is_empty_##_vector_type (const _vector_type vec[static 1]) {	\
 	return vec->begin == vec->end;	\
 }	\
 \
-_vector_type *clear_##_vector_type (_vector_type *vec) {	\
+_vector_type *clear_##_vector_type (_vector_type vec[static 1]) {	\
 	for( size_t i=vec->begin; i<vec->end; ++i ) {	\
 		destroy_##type (vec->data+i);	\
 	}	\
@@ -60,33 +64,34 @@ _vector_type *clear_##_vector_type (_vector_type *vec) {	\
 	return vec;	\
 }	\
 \
-_vector_type *destroy_##_vector_type (_vector_type *vec) { \
-	if (vec) { \
-		if (vec->data) {	\
-			clear_##_vector_type(vec);	\
-			vec->capacity = 0;	\
-			free(vec->data);	\
-			vec->data = NULL;	\
+_vector_type *destroy_##_vector_type (_vector_type vec[static 1]) { \
+	clear_##_vector_type(vec);	\
+	vec->begin = vec->end = vec->capacity = 0;	\
+	free(vec->data);	\
+	vec->data = NULL;	\
+	\
+	return vec;	\
+}	\
+\
+_vector_type *expand_back_##_vector_type (_vector_type vec[static 1]) {	\
+	if (vec->end == vec->capacity) {	\
+		vec->capacity = 2*vec->capacity+1;	\
+		vec->data = realloc(vec->data, sizeof(type)*vec->capacity); 	\
+		if (!vec->data) {	\
+			perror("MEMORY SHORTAGE\n");	\
+			exit(EXIT_FAILURE);	\
 		}	\
 	}	\
 	return vec;	\
 }	\
 \
-_vector_type *expand_back_##_vector_type (_vector_type *vec) {	\
-	if (vec->end == vec->capacity) {	\
-		vec->capacity = 2*vec->capacity+1;	\
-		vec->data = realloc(vec->data, sizeof(type)*vec->capacity); 	\
-	}	\
-	return vec;	\
-}	\
-\
-_vector_type *push_back_##_vector_type (_vector_type *vec, type el) {	\
+_vector_type *push_back_##_vector_type (_vector_type vec[static 1], type const el) {	\
 	expand_back_##_vector_type(vec);	\
 	vec->data[vec->end++] = el;	\
 	return vec;	\
 }	\
 \
-_vector_type *concatenate_##_vector_type (_vector_type *vec, const _vector_type *vec1) {	\
+_vector_type *concatenate_##_vector_type (_vector_type vec[static 1], const _vector_type vec1[static 1]) {	\
 	for( size_t i = vec1->begin; i<vec1->end; ++i ) {	\
 		push_back_##_vector_type (vec, vec1->data[i]);	\
 	}	\
@@ -94,24 +99,24 @@ _vector_type *concatenate_##_vector_type (_vector_type *vec, const _vector_type 
 	return vec;	\
 }	\
 \
-_vector_type *copy_##_vector_type (const _vector_type *source, _vector_type *dest) { \
+_vector_type *copy_##_vector_type (const _vector_type source[static 1], _vector_type dest[static 1]) { \
 	return concatenate_##_vector_type (clear_##_vector_type (dest), source);	\
 }	\
 \
-type pop_back_##_vector_type (_vector_type *vec) {	\
+type pop_back_##_vector_type (_vector_type vec[static 1]) {	\
 	type return_value = vec->data[--vec->end];	\
 	destroy_##type(vec->data+vec->end);	\
 	return return_value;	\
 }	\
 \
-type *get_##_vector_type (_vector_type *vec, size_t i) { \
+type *get_##_vector_type (_vector_type vec[static 1], const size_t i) { \
 	return vec->data+i;	\
 }	\
 \
-void set_##_vector_type (_vector_type *vec, size_t i, type el) { \
+void set_##_vector_type (_vector_type vec[static 1], const size_t i, type el) { \
 	vec->data[i] = el;	\
 }	\
-type *back_##_vector_type (_vector_type *vec) {\
+type *back_##_vector_type (_vector_type vec[static 1]) {\
 	return vec->begin == vec->end 	\
 		? NULL	\
 		: vec->data+vec->end-1;	\

@@ -3,24 +3,9 @@
 
 #include "dfazer.h"
 
-static vector_type(pnfa_node_t) *make_unique (vector_type(pnfa_node_t) *nodes) {
-	unset_flags(nodes, ~flag_nfa_node_visited);
-	size_t j = nodes->begin;
-	forall(nodes, i) {
-		if (nodes->data[i]->flags & flag_nfa_node_visited) {
-			continue;
-		}
-		nodes->data[i]->flags |= flag_nfa_node_visited;
-		nodes->data[j++] = nodes->data[i];
-	}
-	nodes->end = j;
-
-	return nodes;
-}
-
 // @return: ptr to vector with unique ptrs to nfa nodes of the empty transition closure
-vector_type(pnfa_node_t) *empty_trans_closure (vector_type(pnfa_node_t) *nodes) {
-	make_unique(nodes);
+vector_type(pnfa_node_t) *empty_trans_closure (vector_type(pnfa_node_t) nodes[static 1]) {
+	make_unique_nfa_nodes(nodes);
 	nfa_node_t *node;
 	forall( nodes, i ) {
 		node = nodes->data[i];
@@ -32,12 +17,14 @@ vector_type(pnfa_node_t) *empty_trans_closure (vector_type(pnfa_node_t) *nodes) 
 			push_back_vector(pnfa_node_t, nodes, node->out->data[j]);
 		}
 	}
+
+	return nodes;
 }
 
 heap_def(uint64_t, <, less);
 
 // @return: ptr to vector of sorted ids in the subset
-vector_type(uint64_t) *pnfa_nodes_to_ids (vector_type(pnfa_node_t) *in, vector_type(uint64_t) *out) {
+vector_type(uint64_t) *pnfa_nodes_to_ids (const vector_type(pnfa_node_t) in[static 1], vector_type(uint64_t) out[static 1]) {
 	size_t begin = out->end;
 	forall(in, i) {
 		push_back_vector(uint64_t, out, in->data[i]->id);
@@ -48,25 +35,10 @@ vector_type(uint64_t) *pnfa_nodes_to_ids (vector_type(pnfa_node_t) *in, vector_t
 	return out;
 }
 
-/*
-	@return: vector of ptrs to the nodes of the new DFA
-	_nfa : ptr to original NFA
-	_dfa :  ptr to new DFA
-	id : next fresh id
-	ids : trie, each new ids is indexed by the encoded respective subset
-	new_id : ptr to the uint64_t in the trie where you specify the 
-			corresponding new id
-	subset_ids : temp to store ids of each subset
-	subsets : vector of vector of pnfa_node_t 
-			(each element is a vector of ptrs to nodes of a subset)
-	bytes : temp to store the encoded subset
-	node_ptr : temp 
-	node_ptrs : vect to store ptrs to new nodes (~node_ptrs[id])
-*/
-vector_type(pnfa_node_t) *add_initial_transform_subset_nfa(
-	nfa_t *in, 
-	nfa_t *out, 
-	vector_type(pnfa_node_t) *subset) 
+vector_type(pnfa_node_t) *add_initial_transform_subset_nfa (
+	nfa_t in[static 1], 
+	nfa_t _out[static 1], 
+	vector_type(pnfa_node_t) subset[static 1]) 
 {
 	// For a better representation: rather than specifying all "go back to node 0", 
 	// specify then a default action (go to 0 instead of fail)
@@ -76,26 +48,26 @@ vector_type(pnfa_node_t) *add_initial_transform_subset_nfa(
 	return concatenate_vector(pnfa_node_t, subset, &in->initial);
 }
 
-vector_type(pnfa_node_t) *empty_transform_subset_nfa(
-	nfa_t *in, 
-	nfa_t *out, 
-	vector_type(pnfa_node_t) *subset) 
+vector_type(pnfa_node_t) *empty_transform_subset_nfa (
+	nfa_t in[static 1], 
+	nfa_t out[static 1], 
+	vector_type(pnfa_node_t) subset[static 1]) 
 {
 	return subset;
 }
 
-vector_type(pnfa_node_t) nfa_to_dfa(nfa_t *nfa, nfa_t *dfa) {
+vector_type(pnfa_node_t) nfa_to_dfa (nfa_t nfa[static 1], nfa_t dfa[static 1]) {
 	return transformed_subset_construction_nfa(nfa, dfa, empty_transform_subset_nfa);
 }
 
-vector_type(pnfa_node_t) nfa_to_search_automata(nfa_t *in, nfa_t *out) {
+vector_type(pnfa_node_t) nfa_to_search_automata (nfa_t in[static 1], nfa_t out[static 1]) {
 	return transformed_subset_construction_nfa(in, out, add_initial_transform_subset_nfa);
 }
 
 vector_type(pnfa_node_t) transformed_subset_construction_nfa(
-	nfa_t *in, 
-	nfa_t *out,
-	vector_type(pnfa_node_t) *subset_transform (nfa_t *, nfa_t *, vector_type(pnfa_node_t) *)) 
+	nfa_t in[static 1] , 
+	nfa_t out[static 1] ,
+	vector_type(pnfa_node_t) *subset_transform (nfa_t [static 1], nfa_t [static 1], vector_type(pnfa_node_t) [static 1])) 
 {
 	// the new nfa - a dfa indeed
 	place_nfa_t(out);
@@ -231,70 +203,70 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 	return node_ptrs;
 }
 
-vector_type(pnfa_node_t) reverse_nfa(nfa_t *_nfa, nfa_t *r_nfa) {
+vector_type(pnfa_node_t) reverse_nfa(nfa_t  nfa[static 1], nfa_t  r_nfa[static 1]) {
 	place_nfa_t(r_nfa);
 	
-	vector_type(pnfa_node_t) _node_ptrs = setup_nodes_from_nfa(_nfa);
-	vector_type(pnfa_node_t) r_node_ptrs = get_copy_of_nodes(&_node_ptrs);
+	vector_type(pnfa_node_t) nodes = setup_nodes_from_nfa(nfa);
+	vector_type(pnfa_node_t) r_nodes = get_copy_of_nodes(&nodes);
 
-	forall(&_node_ptrs, i) {
+	forall (&nodes, i) {
 		uint8_t c = 0;
-		nfa_node_t *source_ptr = _node_ptrs.data[i];
+		nfa_node_t *source = nodes.data[i];
 		do {
-			vector_type(pnfa_node_t) *dest_ptrs = source_ptr->out+c;
-			forall(dest_ptrs, j) {
-				nfa_node_t *dest_ptr = dest_ptrs->data[j];
-				add_nfa_edge(r_node_ptrs.data[dest_ptr->id], r_node_ptrs.data[source_ptr->id], c);
+			vector_type(pnfa_node_t) *dests = source->out+c;
+			forall (dests, j) {
+				nfa_node_t *dest = dests->data[j];
+				add_nfa_edge(r_nodes.data[dest->id], r_nodes.data[source->id], c);
 			}
 		} while(c++ != 255);
 	}
 
-	forall(&_nfa->initial, i) {
-		push_back_vector(pnfa_node_t, &r_nfa->final, r_node_ptrs.data[_nfa->initial.data[i]->id]);
+	forall(&nfa->initial, i) {
+		push_back_vector(pnfa_node_t, &r_nfa->final, r_nodes.data[nfa->initial.data[i]->id]);
 	}
-	forall(&_nfa->final, i) {
-		push_back_vector(pnfa_node_t, &r_nfa->initial, r_node_ptrs.data[_nfa->final.data[i]->id]);
+	forall(&nfa->final, i) {
+		push_back_vector(pnfa_node_t, &r_nfa->initial, r_nodes.data[nfa->final.data[i]->id]);
 	}
 
 	set_extremality_flags(r_nfa);
-	return r_node_ptrs;
+	return r_nodes;
 }
 
-vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t *nfa, nfa_t *mdfa) {
+vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t nfa[static 1] , nfa_t mdfa[static 1] ) {
 	nfa_t rnfa;
-	vector_type(pnfa_node_t) node_ptrs1 = reverse_nfa(nfa, &rnfa);
+	vector_type(pnfa_node_t) nodes1 = reverse_nfa(nfa, &rnfa);
 
 	nfa_t drnfa;
-	vector_type(pnfa_node_t) node_ptrs2 = nfa_to_dfa(&rnfa, &drnfa);
+	vector_type(pnfa_node_t) nodes2 = nfa_to_dfa(&rnfa, &drnfa);
 	
-	forall(&node_ptrs1, i) {
-		destroy(nfa_node_t)(node_ptrs1.data[i]);
+	forall(&nodes1, i) {
+		destroy(nfa_node_t)(nodes1.data[i]);
 	}
-	destroy_vector(pnfa_node_t, &node_ptrs1);
+	destroy_vector(pnfa_node_t, &nodes1);
 	destroy(nfa_t)(&rnfa);
 
 	nfa_t rdrnfa;
-	vector_type(pnfa_node_t) node_ptrs3 = reverse_nfa(&drnfa, &rdrnfa);
+	vector_type(pnfa_node_t) nodes3 = reverse_nfa(&drnfa, &rdrnfa);
 
-	forall(&node_ptrs2, i) {
-		destroy(nfa_node_t)(node_ptrs2.data[i]);
+	forall(&nodes2, i) {
+		destroy(nfa_node_t)(nodes2.data[i]);
 	}
-	destroy_vector(pnfa_node_t, &node_ptrs2);
+	destroy_vector(pnfa_node_t, &nodes2);
 	destroy(nfa_t)(&drnfa);
 
 	place_nfa_t(mdfa);
-	vector_type(pnfa_node_t) node_ptrs4 = nfa_to_dfa(&rdrnfa, mdfa);
+	vector_type(pnfa_node_t) nodes4 = nfa_to_dfa(&rdrnfa, mdfa);
 
-	forall(&node_ptrs3, i) {
-		destroy(nfa_node_t)(node_ptrs3.data[i]);
+	forall(&nodes3, i) {
+		destroy(nfa_node_t)(nodes3.data[i]);
 	}
-	destroy_vector(pnfa_node_t, &node_ptrs3);
+	destroy_vector(pnfa_node_t, &nodes3);
 	destroy(nfa_t)(&rdrnfa);
 
-	return node_ptrs4;
+	return nodes4;
 }
 
-nfa_t intersection_dfazing_nfa (nfa_t *nfa1, nfa_t *nfa2) {
+nfa_t intersection_dfazing_nfa (nfa_t nfa1[static 1], nfa_t nfa2[static 1]) {
 	nfa_t dfa1, dfa2;
 	place_nfa_t(&dfa1);
 	place_nfa_t(&dfa2);
