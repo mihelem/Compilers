@@ -180,6 +180,7 @@ type *back_##_vector_type (_vector_type vec[static 1]) {\
 #define destroy_uint32_t(...)
 #define destroy_int64_t(...)
 #define destroy_uint64_t(...)
+#define destroy_size_t(...)
 #define destroy(type) destroy_helper(type)
 #define destroy_helper(type) destroy_##type
 

@@ -20,6 +20,7 @@ extern const uint64_t mask6;
 extern const uint64_t uint64_1;
 
 #define forall(vec, i) for( size_t i = (vec)->begin; i < (vec)->end; ++i )
+#define forrall(vec, i) for( size_t i = (vec)->end; i-->(vec)->begin; )
 
 #define DBG printf("%s :: %d\n", __FILE__, __LINE__);
 

@@ -8,5 +8,6 @@
 #include "nfa.h"
 #include "dfazer.h"
 #include "nfa_coder.h"
+#include "automata_coder.h"
 
 #endif

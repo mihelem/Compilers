@@ -1,6 +1,10 @@
 * {
-  font-family: Courier, monospace;
-  color: #000000;
+	font-family: Courier, monospace;
+	color: #000000;
+}
+
+.hidden {
+	display: none;
 }
 
 .user_input {
@@ -19,7 +23,7 @@
 	background-color: #fffbfb;
 	border: 2px solid #ffffff;
 	transition: opacity 0.5s ease-in-out;
-        box-shadow: 0 2px 3px rgba(100,100,100,0.2);
+	box-shadow: 0 2px 3px rgba(100,100,100,0.2);
 }
 
 .user_options:hover {
@@ -57,4 +61,46 @@ input[type=textarea]:focus {
 	background-color: #f0f4ff;
 	font-weight: bold;
 	box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.text_upload {
+	text-align: left;
+	overflow: visible;
+	position: fixed;
+	bottom: 2px;
+}
+
+.text_upload_container {
+	text-align: right;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	justify-content: flex-end;
+}
+
+.upload_file_icon {
+	cursor: pointer;
+	display: block;
+	width: 30px;
+	box-shadow: 0px 0px 2px 2px rgba(255,255,255,1);
+}
+
+.align_right {
+	text-align: right;
+}
+
+.progress_bar {
+	width: 60px;
+}
+
+.uploaded_file_name {
+	opacity: 0;
+	color: #4d73af;
+	background-color: #ffffff;
+	transition: opacity 0.5s ease-in-out;
+	box-shadow: 0px 0px 2px 2px rgba(255,255,255,1);
+}
+
+.uploaded_file_name:hover {
+	opacity: 1;
 }

@@ -1,6 +1,7 @@
 #include "parser_helper.h"
 
 static uint64_t checked_options;
+string_t filename;
 static const uint64_t 
 	mdfa_mermaid = 1, 
 	mdfa_gotocode = 2, 
@@ -12,6 +13,7 @@ static const uint64_t
 // (memory unsafe)
 void set_options_from_command_line(int argc, char **argv) {
 	checked_options = 0;
+	place_string_t(&filename);
 
 	for (int i=1; i<argc; ++i) {
 		switch (argv[i][0]) {
@@ -44,6 +46,16 @@ void set_options_from_command_line(int argc, char **argv) {
 			default:
 				break;
 			}
+			break;
+		case '-':
+			switch (argv[i][1]) {
+				case 'f':
+					cat_cstring_string_t(&filename, argv[i]+3);
+					break;
+				default:
+					break;
+			}
+			break;
 		default:
 			break;
 		}
@@ -64,11 +76,15 @@ void print_response (nfa_t *nfa) {
 	place_nfa_t(&searchmdfa);
 	vector_type(pnfa_node_t) searchmdfa_nodes = vector(pnfa_node_t, 0);
 
+	nfa_t reversedfa;
+	place_nfa_t(&reversedfa);
+	vector_type(pnfa_node_t) reversedfa_nodes = vector(pnfa_node_t, 0);
+
 	if (checked_options & mdfa_checked) {
 		mdfa_nodes = brzozowski_minimization_of_nfa(nfa, &mdfa);
 		if (checked_options & mdfa_gotocode) {
 			separator(mdfa_gotocode);
-			printf("%s\n", dfa_goto_coder(&mdfa, "printer", "getchar", ""));
+			printf("%s\n", dfa_goto_coder(&mdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", ""));
 		}
 		if (checked_options & mdfa_mermaid) {
 			separator(mdfa_mermaid);
@@ -97,7 +113,7 @@ void print_response (nfa_t *nfa) {
 		
 		if (checked_options & searchmdfa_gotocode) {
 			separator(searchmdfa_gotocode);
-			printf("%s\n", dfa_goto_coder(&searchmdfa, "printer", "getchar", "goto node0;"));
+			printf("%s\n", dfa_goto_coder(&searchmdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", "goto node0;"));
 		}
 		if (checked_options & searchmdfa_mermaid) {
 			separator(searchmdfa_mermaid);
@@ -105,6 +121,34 @@ void print_response (nfa_t *nfa) {
 		}
 		if (checked_options & searchmdfa_match) {
 			separator(searchmdfa_match);
+			if (checked_options & mdfa_checked) {
+				reversedfa_nodes = reverse_nfa(&mdfa, &reversedfa);
+			} else {
+				nfa_t dfa;
+				vector_type(pnfa_node_t) dfa_nodes = nfa_to_dfa(nfa, &dfa);
+
+				nfa_t rnfa;
+				vector_type(pnfa_node_t) rnfa_nodes = reverse_nfa(&dfa, &rnfa);
+
+				forall(&dfa_nodes, i) {
+					destroy(nfa_node_t)(dfa_nodes.data[i]);
+				}
+				destroy_vector(pnfa_node_t, &dfa_nodes);
+				destroy(nfa_t)(&dfa);
+
+				reversedfa_nodes = nfa_to_dfa(&rnfa, &reversedfa);
+
+				forall(&rnfa_nodes, i) {
+					destroy(nfa_node_t)(rnfa_nodes.data[i]);
+				}
+				destroy_vector(pnfa_node_t, &rnfa_nodes);
+				destroy(nfa_t)(&rnfa);
+			}
+
+			string_t code = re_matcher_goto_coder(&searchmdfa_nodes, &reversedfa_nodes);
+			printf(
+				"%s\n", 
+				cstringify_string_t(&code));
 		}
 	}
  

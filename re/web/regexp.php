@@ -1,11 +1,14 @@
 <?php
-session_start();
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once "commons.php";
+require_once "textUploader.php";
 
 final class RegExp {
-	const REGEXPFILE = "./data/regexp";
-	const REGEXPARSER = "./bin/scangen";
+	const REGEXFILE = Path::DATADIR."regexp";
+	const REGEXPARSER = Path::BINDIR."scangen";
 	const SEPARATOR = "~~~~~~~~~~\n";
 
 	protected $regexp;
@@ -13,10 +16,6 @@ final class RegExp {
 	protected $options;
 	protected $roptions;
 	protected $filename;
-
-	protected $mermaidMinimalDFA = "";
-	protected $gotoCodeMinimalDFA = "";
-
 
 	function __construct(
 		$regexp,
@@ -28,13 +27,19 @@ final class RegExp {
 		$this->nonce = $nonce;
 		$this->options = $options;
 		$this->roptions = $roptions;
-		$this->filename = self::REGEXPFILE.$this->nonce;
+		$this->filename = self::REGEXFILE.$this->nonce;
+	}
+
+	public static function writeFile($filename, $content) {
+		$handle = fopen($filename, 'wb');
+		fwrite($handle, $content);
+		fclose($handle);
+
+		return true;
 	}
 
 	public function saveInput() {
-		$handle = fopen($this->filename, "wb");
-		fwrite($handle, $this->regexp."\n");
-		fclose($handle);
+		static::writeFile($this->filename, $this->regexp."\n");
 
 		return $this;
 	}
@@ -85,9 +90,49 @@ final class RegExp {
 				"<div id=\"".$id."\"><pre><code>"
  					.$this->options[$graph][$opt]['body']
  				."</code></pre>";
-		} else {	// TODO: prepare search (upload text file etc...)
-			return $this->options[$graph][$opt]['body'];
+		} elseif ($opt == 'match') {
+			if (!array_key_exists('uploaded', $_SESSION) ||
+				!in_array(
+					TextUploader::getTargetFromSource('text_upload_file'),
+					$_SESSION['uploaded']))
+			{
+				return 
+					"<div id=\"".$id."\"><pre><code>"
+						.$this->options[$graph][$opt]['body']
+					."</code></pre>";
+			} else {
+				$source_prefix = $graph.'_'.$opt;
+				if ( !array_key_exists('built', $_SESSION) ||
+					 !array_key_exists($graph, $_SESSION['built']) ||
+					 $_SESSION['built'][$graph] != $_SESSION['regexp_id'])
+				{
+					$this->buildCode($source_prefix, $this->options[$graph][$opt]['body']);
+					$_SESSION['built'][$graph] = $_SESSION['regexp_id'];
+				}
+				$program = static::getBuildName($source_prefix);
+				$result = shell_exec(
+					$program." ".TextUploader::getTargetFromSource('text_upload_file'));
+
+				return 
+					"<div id=\"".$id."\"><pre><code>"
+						.$result
+					."</code></pre>";
+			}
 		}
+	}
+
+	public static function getBuildName($name_prefix) {
+		return PAth::BUILDDIR.$name_prefix.$_SESSION['nonce'];
+	}
+
+	protected function buildCode($name_prefix, $code) {
+		$source_name = static::getBuildName($name_prefix);
+		static::writeFile($source_name.'.c', $code);
+		shell_exec(
+			"cc -c ".$source_name.".c -o ".$source_name.".o -I".Path::INCLUDEDIR
+			." && "."cc ".$source_name.".o ".Path::LIBDIR."string_t.o -o ".$source_name."\n");
+
+		return $source_name;
 	}
 
 	public static function renderResponse(
@@ -136,8 +181,21 @@ foreach ($graphs as $graph => $graph_desc) {
 		];
 	}
 }
+
+if (($_REQUEST['regexp_changed'] == 1)) {
+	$_SESSION['regexp_id'] = bin2hex(random_bytes(32));
+}
+
 echo RegExp::renderResponse(
 		$_REQUEST[$regexp_query],
 		$options,
 		$roptions
 	);
+
+if (DEBUGGAMAN) {
+	echo "<hr><br>";
+	print_r($_REQUEST);
+	echo "<br><br><pre>";
+	print_r($_SESSION);
+	echo "</pre>";
+}

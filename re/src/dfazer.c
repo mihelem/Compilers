@@ -129,7 +129,7 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 		while ( c++ != 255) {
 			vector_type(pnfa_node_t) *psubset = subsets.data+subset_id;
 	
-			// add to new_subset all the destination node ptrs reach with
+			// add to new_subset all the destination node ptrs reached with
 			// the character c from the given psubset
 			clear_vector(pnfa_node_t, &new_subset);
 			forall(psubset, source_id) {
