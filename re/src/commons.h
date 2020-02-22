@@ -18,6 +18,7 @@ extern const uint64_t mask8;
 extern const uint64_t mask7;
 extern const uint64_t mask6;
 extern const uint64_t uint64_1;
+extern const char *symbol_repr[257];
 
 #define forall(vec, i) for( size_t i = (vec)->begin; i < (vec)->end; ++i )
 #define forrall(vec, i) for( size_t i = (vec)->end; i-->(vec)->begin; )

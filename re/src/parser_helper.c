@@ -62,7 +62,7 @@ void set_options_from_command_line(int argc, char **argv) {
 	}
 }
 
-void print_response (nfa_t *nfa) {
+void print_response (nfa_t nfa[static 1]) {
 	static const uint64_t mdfa_checked = mdfa_gotocode | mdfa_mermaid | mdfa_match;
 	static const uint64_t searchmdfa_checked = searchmdfa_gotocode | searchmdfa_mermaid | searchmdfa_match;
 	
@@ -84,7 +84,9 @@ void print_response (nfa_t *nfa) {
 		mdfa_nodes = brzozowski_minimization_of_nfa(nfa, &mdfa);
 		if (checked_options & mdfa_gotocode) {
 			separator(mdfa_gotocode);
-			printf("%s\n", dfa_goto_coder(&mdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", ""));
+			string_t code = dfa_goto_coder(&mdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", "");
+			printf("%s\n", cstringify_string_t(&code));
+			destroy_string_t(&code);
 		}
 		if (checked_options & mdfa_mermaid) {
 			separator(mdfa_mermaid);
@@ -95,10 +97,16 @@ void print_response (nfa_t *nfa) {
 		}
 	}
 	if (checked_options & searchmdfa_checked) {
-		nfa_t *source = 
-			checked_options & mdfa_checked
-			? &mdfa
-			: nfa;
+		nfa_t *source;
+		if (checked_options & mdfa_checked) {
+			source = &mdfa;
+		} else {
+			source = nfa;
+			// set id of nfa nodes
+			vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(nfa, dummy_print_nfa_node);
+			unset_flags(&nodes, ~flag_nfa_node_visited);
+			destroy_vector(pnfa_node_t, &nodes);
+		}
 
 		nfa_t searchnfa;
 		place_nfa_t(&searchnfa);
@@ -107,13 +115,16 @@ void print_response (nfa_t *nfa) {
 
 		forall (&searchnfa_nodes, i) {
 			destroy_nfa_node_t(searchnfa_nodes.data[i]);
+			free(searchnfa_nodes.data[i]);
 		}
 		destroy_vector(pnfa_node_t, &searchnfa_nodes);
 		destroy_nfa_t(&searchnfa);
 		
 		if (checked_options & searchmdfa_gotocode) {
 			separator(searchmdfa_gotocode);
-			printf("%s\n", dfa_goto_coder(&searchmdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", "goto node0;"));
+			string_t code = dfa_goto_coder(&searchmdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", "goto node0;");
+			printf("%s\n", cstringify_string_t(&code));
+			destroy_string_t(&code);
 		}
 		if (checked_options & searchmdfa_mermaid) {
 			separator(searchmdfa_mermaid);
@@ -132,6 +143,7 @@ void print_response (nfa_t *nfa) {
 
 				forall(&dfa_nodes, i) {
 					destroy(nfa_node_t)(dfa_nodes.data[i]);
+					free(dfa_nodes.data[i]);
 				}
 				destroy_vector(pnfa_node_t, &dfa_nodes);
 				destroy(nfa_t)(&dfa);
@@ -140,29 +152,38 @@ void print_response (nfa_t *nfa) {
 
 				forall(&rnfa_nodes, i) {
 					destroy(nfa_node_t)(rnfa_nodes.data[i]);
+					free(rnfa_nodes.data[i]);
 				}
 				destroy_vector(pnfa_node_t, &rnfa_nodes);
 				destroy(nfa_t)(&rnfa);
 			}
 
 			string_t code = re_matcher_goto_coder(&searchmdfa_nodes, &reversedfa_nodes);
-			printf(
-				"%s\n", 
-				cstringify_string_t(&code));
+			printf("%s\n", cstringify_string_t(&code));
+			destroy_string_t(&code);
 		}
 	}
  
 	forall (&mdfa_nodes, i) {
 		destroy_nfa_node_t(mdfa_nodes.data[i]);
+		free(mdfa_nodes.data[i]);
 	}
 	destroy_vector(pnfa_node_t, &mdfa_nodes);
 	destroy_nfa_t(&mdfa);
 
 	forall (&searchmdfa_nodes, i) {
 		destroy_nfa_node_t(searchmdfa_nodes.data[i]);
+		free(searchmdfa_nodes.data[i]);
 	}
 	destroy_vector(pnfa_node_t, &searchmdfa_nodes);
 	destroy_nfa_t(&searchmdfa);
+
+	forall (&reversedfa_nodes, i) {
+		destroy_nfa_node_t(reversedfa_nodes.data[i]);
+		free(reversedfa_nodes.data[i]);
+	}
+	destroy_vector(pnfa_node_t, &reversedfa_nodes);
+	destroy_nfa_t(&reversedfa);
 
 	#undef separator
 }

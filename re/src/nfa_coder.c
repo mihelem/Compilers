@@ -26,7 +26,7 @@ string_t *dfa_node_goto_coder (
 		"\tswitch(c) {\n"));
 
 	uint8_t c = 0;
-	while (c++ != 255) {
+	do {
 		if (is_empty_vector(pnfa_node_t, node->out+c)) {
 			continue;
 		}
@@ -38,7 +38,7 @@ string_t *dfa_node_goto_coder (
 		sprintf(temp_buffer, "%lu", node->out[c].data[0]->id);
 		cat_cstring_string_t(code, temp_buffer);
 		cat_bytes_string_t(code, cum_size_literal(";\n"));
-	}
+	} while(c++ != 255);
 	cat_bytes_string_t(code, cum_size_literal("\tdefault:\n\t\t"));
 	cat_cstring_string_t(code, default_action);
 	cat_bytes_string_t(code, cum_size_literal("\n\t\treturn accepted_states;\n\t}\n"));
@@ -92,14 +92,14 @@ string_t *dfa_goto_coder_body (
 		"\n"));
 
 	forall (nodes, i) {
-			dfa_node_goto_coder(code, nodes->data[i], input, default_action);
+		dfa_node_goto_coder(code, nodes->data[i], input, default_action);
 	}
 	cat_bytes_string_t(code, cum_size_literal("}"));
 
 	return code;
 }
 
-char *dfa_goto_coder (nfa_t dfa[static 1], const char *name, const char *input, const char *default_action) {
+string_t dfa_goto_coder (nfa_t dfa[static 1], const char *name, const char *input, const char *default_action) {
 	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(dfa, dummy_print_nfa_node);
 	unset_flags(&nodes, ~flag_nfa_node_visited);
 	string_t code;
@@ -109,7 +109,7 @@ char *dfa_goto_coder (nfa_t dfa[static 1], const char *name, const char *input, 
 	dfa_goto_coder_body(&code, &nodes, name, input, default_action);
 
 	destroy_vector(pnfa_node_t, &nodes);
-	return cstringify_string_t(&code);
+	return code;
 }
 
 // Assuming a non-empty DFA
@@ -142,7 +142,7 @@ vector_type(pnfa_node_t) unroll_dfa (nfa_t dag[static 1], nfa_t tree[static 1]) 
 			dag_node->flags |= flag_nfa_node_visiting;
 			tree_node->id = id++;
 			uint8_t c = 0;
-			while (c++ != 255) {
+			do {
 				forall (dag_node->out+c, i) {
 					// NOT A DAG!
 					if (dag_node->out[c].data[i]->flags & flag_nfa_node_visiting) {
@@ -162,7 +162,7 @@ vector_type(pnfa_node_t) unroll_dfa (nfa_t dag[static 1], nfa_t tree[static 1]) 
 					push_back_vector(pnfa_node_t, &stack_tree, new_node);
 					add_nfa_edge(tree_node, new_node, c);
 				}
-			}
+			} while (c++ != 255);
 		}
 	}
 

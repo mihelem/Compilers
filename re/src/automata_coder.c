@@ -52,7 +52,7 @@ string_t *automata_from_options_node_goto_coder (
 		cum_size_literal("\tswitch(c) {\n"));
 
 	uint8_t c = 0;
-	while (c++ != 255) {
+	do {
 		if (is_empty_vector(pnfa_node_t, node->out+c)) {
 			continue;
 		}
@@ -66,7 +66,7 @@ string_t *automata_from_options_node_goto_coder (
 		sprintf(temp_buffer, "%lu", node->out[c].data[0]->id);
 		cat_cstring_string_t(code, temp_buffer);
 		cat_bytes_string_t(code, cum_size_literal(";\n"));
-	}
+	} while (c++ != 255);
 	cat_bytes_string_t(code, cum_size_literal("\tdefault:\n"));
 	cat_string_t(code, &options->node_default_transition_code);
 	cat_bytes_string_t(code, cum_size_literal("\t}\n"));

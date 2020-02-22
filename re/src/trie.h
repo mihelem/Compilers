@@ -20,18 +20,18 @@ trie_t trie(size_t capacity);
 #define destroy_trie(_trie) destroy_vector(trie_node_t, _trie)
 
 #define destroy_trie_node_t(...)
-trie_t *add_empty_node_to_trie (trie_t *_trie);
+trie_t *add_empty_node_to_trie (trie_t _trie[static 1]);
 
 vector_def_header(uint8_t);
 typedef vector_type(uint8_t) bytes_t;
 
 vector_def_header(uint64_t);
 
-bytes_t *append_uint64_to_bytes (bytes_t *bytes, uint64_t x);
-bytes_t *append_separator_to_bytes (bytes_t *bytes);
-bytes_t *append_eol_to_bytes (bytes_t *bytes);
-bytes_t *encode_subset_to_bytes (vector_type(uint64_t) *in, bytes_t *out);
+bytes_t *append_uint64_to_bytes (bytes_t bytes[static 1], uint64_t x);
+bytes_t *append_separator_to_bytes (bytes_t bytes[static 1]);
+bytes_t *append_eol_to_bytes (bytes_t bytes[static 1]);
+bytes_t *encode_subset_to_bytes (vector_type(uint64_t) in[static 1], bytes_t out[static 1]);
 // @return: pointer to id associated with eol
-uint64_t *add_subset_to_trie (trie_t *_trie, bytes_t *bytes);
+uint64_t *add_subset_to_trie (trie_t _trie[static 1], bytes_t bytes[static 1]);
 
 #endif

@@ -4,8 +4,8 @@ define("DEBUGGAMAN", false);
 
 class Path {
 	public const BINDIR = "/var/www/bin/";
-	public const DATADIR = "/var/www/data/";
 	public const BUILDDIR = "/var/www/generated/";
+	public const DATADIR = "/var/www/data/";
 	public const INCLUDEDIR = "/var/www/include/";
 	public const LIBDIR = "/var/www/lib/";
 	public const SOURCEDIR = "/var/www/src/";

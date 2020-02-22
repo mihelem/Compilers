@@ -36,12 +36,16 @@ void yyerror(char *s) {
 
 %%
 
-lines :	regexp EOL			{ 	$$ = vector(nfa_t, 0); push_back_vector(nfa_t, &$$, $1); print_response(&$1); 
-								destroy_nodes_of_nfa(&$1); destroy_vector(nfa_t, &$$); }
+lines :	regexp EOL			{ 	
+								$$ = vector(nfa_t, 0); 
+								push_back_vector(nfa_t, &$$, $1); 
+								print_response(&$1); 
+								destroy_nodes_of_nfa(&$1); 
+								destroy_vector(nfa_t, &$$); }
 	;
 
 regexp : pieces				{ 	$$ = $1; }
-	|	regexp '|' pieces	{ 	$$ = union_nfa(&$1, &$3); }
+	|	regexp '|' pieces	{ 	unite_nfa(&$$, &$1, &$3); }
 	| 	regexp '&' pieces	{ 	$$ = intersection_dfazing_nfa(&$1, &$3); 
 								destroy_nfa_t(destroy_nodes_of_nfa(&$1)); 
 								destroy_nfa_t(destroy_nodes_of_nfa(&$3)); }
@@ -54,13 +58,13 @@ pieces : piece 				{ 	$$ = $1; }
 								apply_flags_to_nfa(&$$, flag_nfa_node_initial, ~flag_nfa_node_visited); }
 	|	'>' piece '<'		{ 	$$ = $2; 
 								apply_flags_to_nfa(&$$, flag_nfa_node_initial|flag_nfa_node_final, ~flag_nfa_node_visited); }
-	|	pieces piece 		{ 	$$ = concatenation_nfa(&$1, &$2); destroy_nfa_t(&$1);	destroy_nfa_t(&$2); }
+	|	pieces piece 		{ 	concatenate_nfa(&$$, &$1, &$2); }
 	|	pieces '>' piece 	{ 	apply_flags_to_nfa(&$3, flag_nfa_node_final, ~flag_nfa_node_visited); 
-								$$ = concatenation_nfa(&$1, &$3); destroy_nfa_t(&$1);	destroy_nfa_t(&$3); }
+								concatenate_nfa(&$$, &$1, &$3); }
 	| 	pieces piece '<'	{ 	apply_flags_to_nfa(&$2, flag_nfa_node_initial, ~flag_nfa_node_visited);
-								$$ = concatenation_nfa(&$1, &$2); destroy_nfa_t(&$1);	destroy_nfa_t(&$2); }
+								concatenate_nfa(&$$, &$1, &$2); }
 	|	pieces '>' piece '<'{ 	apply_flags_to_nfa(&$3, flag_nfa_node_initial|flag_nfa_node_final, ~flag_nfa_node_visited);
-								$$ = concatenation_nfa(&$1, &$3); destroy_nfa_t(&$1);	destroy_nfa_t(&$3); }
+								concatenate_nfa(&$$, &$1, &$3); }
 	;
 
 piece : atom '*'			{ $$ = $1; make_avoidable_nfa(make_repeatable_nfa(&$$)); }
@@ -70,8 +74,8 @@ piece : atom '*'			{ $$ = $1; make_avoidable_nfa(make_repeatable_nfa(&$$)); }
 	;
 
 atom :	'(' regexp ')'		{ $$ = $2; }
-	|	'[' '^' subset ']'	{ $$ = range_to_nfa(complement_range(set_complemented_range(&$3))); free(&$3); }
-	|	'[' subset ']'		{ $$ = range_to_nfa(&$2); free(&$2); }
+	|	'[' '^' subset ']'	{ $$ = range_to_nfa(complement_range(&$3)); }
+	|	'[' subset ']'		{ $$ = range_to_nfa(&$2); }
 	|	LITERAL				{ $$ = literal_to_nfa($1); }
 	;
 
@@ -82,7 +86,7 @@ subset : ']' 				{ set_in_range(clear_range(&$$), ']'); }
 	|	lrange				{ $$ = $1; }
 	;
 
-lrange :	lrange range 	{ $$ = union_range(&$1, &$2); free(&$1); free(&$2); }
+lrange :	lrange range 	{ $$ = union_range(&$1, &$2); }
  	|	lrange rliteral		{ $$ = $1; set_in_range(&$$, $2); }
 	|	range 				{ $$ = $1; }
 	| 	rliteral			{ set_in_range(clear_range(&$$), $1); }
@@ -107,6 +111,8 @@ rliteral :	LITERAL	{ $$ = $1; }
 	|	')'			{ $$ = ')'; }
 	|	'['			{ $$ = '['; }
 	|	'&'			{ $$ = '&'; }
+	|	'<'			{ $$ = '<'; }
+	|	'>'			{ $$ = '>'; }
 	;
 
 %%

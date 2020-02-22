@@ -3,13 +3,23 @@ YACC?=bison
 YFLAGS?=-d
 CFLAGS?=-O3 -Wall
 
-all: ../web/bin/scangen
+BINDIR = /var/www/bin/
+INCLUDEDIR = /var/www/include/
+LIBDIR = /var/www/lib/
+
+SCANGEN = $(BINDIR)scangen
+
+all: $(SCANGEN)
 
 scanner.o: parser.c
 
-../web/bin/scangen: scanner.o parser.o commons.o range.o nfa.o trie.o dfazer.o nfa_coder.o string_t.o parser_helper.o automata_coder.o
+$(SCANGEN): scanner.o parser.o commons.o range.o nfa.o trie.o dfazer.o nfa_coder.o string_t.o parser_helper.o automata_coder.o
 	$(CC) -o $@ $^
-		rm -f scangen_types.o scanner.o parser_helper.o parser.o commons.o range.o nfa.o string_t.o trie.o dfazer.o nfa_coder.o automata_coder.o parser.c y.tab.h
+		rm -f parser.c y.tab.h
+		mv *.o $(LIBDIR)
+		cp *.h $(INCLUDEDIR)
 
 clean:
-	rm -f ../web/bin/scangen
+	cd $(LIBDIR)
+	rm -f scanner.o parser.o commons.o range.o nfa.o trie.o dfazer.o nfa_coder.o string_t.o parser_helper.o automata_coder.o
+	rm -f $(SCANGEN)

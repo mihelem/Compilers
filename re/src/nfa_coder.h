@@ -7,7 +7,7 @@
 //vector_type(pnfa_node_t) empty_trans_closure (nfa_t *nfa_in, nfa_t *nfa_out)
 
 string_t *dfa_node_goto_coder (string_t *code, nfa_node_t *node, const char *input, const char *default_action);
-char *dfa_goto_coder (nfa_t *dfa, const char *name, const char *input, const char *default_action);
+string_t dfa_goto_coder (nfa_t *dfa, const char *name, const char *input, const char *default_action);
 vector_type(pnfa_node_t) unroll_dfa (nfa_t *dag, nfa_t *tree);
 
 #endif

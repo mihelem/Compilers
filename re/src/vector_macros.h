@@ -42,10 +42,14 @@ void set_##_vector_type (_vector_type vec[static 1], const size_t i, type el);
 #define vector_def_param_expander(type, _vector_name, _vector_type) \
 _vector_type new_##_vector_type (const size_t capacity) { \
 	_vector_type vec;	\
-	vec.data = malloc(sizeof(type)*capacity);	\
-	if (!vec.data) {	\
-		perror("MEMORY SHORTAGE\n");	\
-		exit(EXIT_FAILURE);	\
+	if (capacity) {	\
+		vec.data = malloc(sizeof(type)*capacity);	\
+		if (!vec.data) {	\
+			perror("MEMORY SHORTAGE\n");	\
+			exit(EXIT_FAILURE);	\
+		}	\
+	} else {	\
+		vec.data = NULL;	\
 	}	\
 	vec.capacity = capacity;	\
 	vec.begin = vec.end = 0;	\
@@ -66,7 +70,7 @@ _vector_type *clear_##_vector_type (_vector_type vec[static 1]) {	\
 \
 _vector_type *destroy_##_vector_type (_vector_type vec[static 1]) { \
 	clear_##_vector_type(vec);	\
-	vec->begin = vec->end = vec->capacity = 0;	\
+	vec->capacity = 0;	\
 	free(vec->data);	\
 	vec->data = NULL;	\
 	\
@@ -75,11 +79,14 @@ _vector_type *destroy_##_vector_type (_vector_type vec[static 1]) { \
 \
 _vector_type *expand_back_##_vector_type (_vector_type vec[static 1]) {	\
 	if (vec->end == vec->capacity) {	\
-		vec->capacity = 2*vec->capacity+1;	\
-		vec->data = realloc(vec->data, sizeof(type)*vec->capacity); 	\
-		if (!vec->data) {	\
+		size_t capacity = 2*vec->capacity+1;	\
+		type *data = realloc(vec->data, sizeof(type)*capacity);	\
+		if (!data) {	\
 			perror("MEMORY SHORTAGE\n");	\
 			exit(EXIT_FAILURE);	\
+		} else {	\
+			vec->capacity = 2*vec->capacity+1;	\
+			vec->data = data; 	\
 		}	\
 	}	\
 	return vec;	\

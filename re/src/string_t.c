@@ -27,12 +27,14 @@ string_t *expand_string_t (string_t str[static 1], size_t n) {
 		do {
 			new_capacity = 2*new_capacity+1;
 		} while (n > new_capacity);
-		str->data = realloc(str->data, new_capacity);
-		if (!str->data) {
+		char *data = realloc(str->data, new_capacity);
+		if (!data) {
 			perror("OUT OF MEMORY\n");
 			exit(EXIT_FAILURE);
+		} else {
+			str->data = data;
+			str->capacity = new_capacity;
 		}
-		str->capacity = new_capacity;
 	}
 
 	return str;

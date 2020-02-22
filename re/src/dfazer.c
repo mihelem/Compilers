@@ -9,12 +9,12 @@ vector_type(pnfa_node_t) *empty_trans_closure (vector_type(pnfa_node_t) nodes[st
 	nfa_node_t *node;
 	forall( nodes, i ) {
 		node = nodes->data[i];
-		forall( node->out, j ) {
-			if (node->out->data[j]->flags & flag_nfa_node_visited) {
+		forall( node->out+256, j ) {
+			if (node->out[256].data[j]->flags & flag_nfa_node_visited) {
 				continue;
 			}
-			node->out->data[j]->flags |= flag_nfa_node_visited;
-			push_back_vector(pnfa_node_t, nodes, node->out->data[j]);
+			node->out[256].data[j]->flags |= flag_nfa_node_visited;
+			push_back_vector(pnfa_node_t, nodes, node->out[256].data[j]);
 		}
 	}
 
@@ -65,8 +65,8 @@ vector_type(pnfa_node_t) nfa_to_search_automata (nfa_t in[static 1], nfa_t out[s
 }
 
 vector_type(pnfa_node_t) transformed_subset_construction_nfa(
-	nfa_t in[static 1] , 
-	nfa_t out[static 1] ,
+	nfa_t in[static 1], 
+	nfa_t out[static 1],
 	vector_type(pnfa_node_t) *subset_transform (nfa_t [static 1], nfa_t [static 1], vector_type(pnfa_node_t) [static 1])) 
 {
 	// the new nfa - a dfa indeed
@@ -126,7 +126,7 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 	vector_type(pnfa_node_t) new_subset = vector(pnfa_node_t, 0);
 	forall(&subsets, subset_id) {
 		c = 0;
-		while ( c++ != 255) {
+		do {
 			vector_type(pnfa_node_t) *psubset = subsets.data+subset_id;
 	
 			// add to new_subset all the destination node ptrs reached with
@@ -181,7 +181,7 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 			unset_flags(&new_subset, ~flag_nfa_node_visited);
 			add_nfa_edge (node_ptrs.data[subset_id], node_ptr, c);
 			//push_back_vector(pnfa_node_t, node_ptrs.data[subset_id]->out+c, node_ptr);
-		}
+		} while ( c++ != 255);
 	}
 
 	/*printf("\n---------------\n SUBSETS:\n");
@@ -210,15 +210,14 @@ vector_type(pnfa_node_t) reverse_nfa(nfa_t  nfa[static 1], nfa_t  r_nfa[static 1
 	vector_type(pnfa_node_t) r_nodes = get_copy_of_nodes(&nodes);
 
 	forall (&nodes, i) {
-		uint8_t c = 0;
 		nfa_node_t *source = nodes.data[i];
-		do {
-			vector_type(pnfa_node_t) *dests = source->out+c;
+		for (size_t l=0; l<257; ++l) {
+			vector_type(pnfa_node_t) *dests = source->out+l;
 			forall (dests, j) {
 				nfa_node_t *dest = dests->data[j];
-				add_nfa_edge(r_nodes.data[dest->id], r_nodes.data[source->id], c);
+				add_nfa_edge(r_nodes.data[dest->id], r_nodes.data[source->id], l);
 			}
-		} while(c++ != 255);
+		}
 	}
 
 	forall(&nfa->initial, i) {
@@ -227,6 +226,8 @@ vector_type(pnfa_node_t) reverse_nfa(nfa_t  nfa[static 1], nfa_t  r_nfa[static 1
 	forall(&nfa->final, i) {
 		push_back_vector(pnfa_node_t, &r_nfa->initial, r_nodes.data[nfa->final.data[i]->id]);
 	}
+
+	destroy_vector(pnfa_node_t, &nodes);
 
 	set_extremality_flags(r_nfa);
 	return r_nodes;
@@ -241,6 +242,7 @@ vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t nfa[static 1] , nf
 	
 	forall(&nodes1, i) {
 		destroy(nfa_node_t)(nodes1.data[i]);
+		free(nodes1.data[i]);
 	}
 	destroy_vector(pnfa_node_t, &nodes1);
 	destroy(nfa_t)(&rnfa);
@@ -250,6 +252,7 @@ vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t nfa[static 1] , nf
 
 	forall(&nodes2, i) {
 		destroy(nfa_node_t)(nodes2.data[i]);
+		free(nodes2.data[i]);
 	}
 	destroy_vector(pnfa_node_t, &nodes2);
 	destroy(nfa_t)(&drnfa);
@@ -259,6 +262,7 @@ vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t nfa[static 1] , nf
 
 	forall(&nodes3, i) {
 		destroy(nfa_node_t)(nodes3.data[i]);
+		free(nodes3.data[i]);
 	}
 	destroy_vector(pnfa_node_t, &nodes3);
 	destroy(nfa_t)(&rdrnfa);
@@ -275,15 +279,29 @@ nfa_t intersection_dfazing_nfa (nfa_t nfa1[static 1], nfa_t nfa2[static 1]) {
 	vector_type(pnfa_node_t) nodes2 = nfa_to_dfa(nfa2, &dfa2);
 
 	nfa_t nfa = intersection_nfa(&dfa1, &dfa2);
+	
 	forall (&nodes1, i) {
 		destroy_nfa_node_t (nodes1.data[i]);
+		free(nodes1.data[i]);
 	}
+	destroy_vector(pnfa_node_t, &nodes1);
+
 	forall (&nodes2, i) {
 		destroy_nfa_node_t (nodes2.data[i]);
+		free(nodes2.data[i]);
 	}
-
-	destroy_vector(pnfa_node_t, &nodes1);
 	destroy_vector(pnfa_node_t, &nodes2);
+
+	destroy_nfa_t(&dfa1);
+	destroy_nfa_t(&dfa2);
+
+	return nfa;
+}
+
+nfa_t *intersect_dfazing_nfa (nfa_t nfa[static 1], nfa_t nfa1[static 1], nfa_t nfa2[static 2]) {
+	*nfa = intersection_dfazing_nfa(nfa1, nfa2);
+	destroy_nfa_t(destroy_nodes_of_nfa(nfa1)); 
+	destroy_nfa_t(destroy_nodes_of_nfa(nfa2));
 
 	return nfa;
 }

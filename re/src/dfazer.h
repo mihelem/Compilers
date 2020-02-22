@@ -33,5 +33,6 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 vector_type(pnfa_node_t) reverse_nfa(nfa_t nfa[static 1], nfa_t r_nfa[static 1]);
 vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t nfa[static 1] , nfa_t mdfa[static 1] );
 nfa_t intersection_dfazing_nfa (nfa_t nfa1[static 1], nfa_t nfa2[static 1]);
+nfa_t *intersect_dfazing_nfa (nfa_t nfa[static 1], nfa_t nfa1[static 1], nfa_t nfa2[static 2]);
 
 #endif
