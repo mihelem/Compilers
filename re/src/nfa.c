@@ -484,6 +484,14 @@ vector_type(pnfa_node_t) *make_unique_nfa_nodes (vector_type(pnfa_node_t) nodes[
 	return nodes;
 }
 
+nfa_t *set_ids_of_nfa (nfa_t nfa[static 1]) {
+	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(nfa, dummy_print_nfa_node);
+	unset_flags(&nodes, ~flag_nfa_node_visited);
+	destroy_vector(pnfa_node_t, &nodes);
+
+	return nfa;
+}
+
 vector_def(nfa_t);
 
 vector_def(vector_type(pnfa_node_t));

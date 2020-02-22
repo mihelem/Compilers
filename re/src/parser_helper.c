@@ -102,10 +102,7 @@ void print_response (nfa_t nfa[static 1]) {
 			source = &mdfa;
 		} else {
 			source = nfa;
-			// set id of nfa nodes
-			vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(nfa, dummy_print_nfa_node);
-			unset_flags(&nodes, ~flag_nfa_node_visited);
-			destroy_vector(pnfa_node_t, &nodes);
+			set_ids_of_nfa(nfa);
 		}
 
 		nfa_t searchnfa;

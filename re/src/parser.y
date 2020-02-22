@@ -31,9 +31,6 @@ void yyerror(char *s) {
 %type <nfa> atom piece pieces regexp
 %type <list> lines
 
-%right '|'
-%right '&'
-
 %%
 
 lines :	regexp EOL			{ 	
@@ -46,7 +43,7 @@ lines :	regexp EOL			{
 
 regexp : pieces				{ 	$$ = $1; }
 	|	regexp '|' pieces	{ 	unite_nfa(&$$, &$1, &$3); }
-	| 	regexp '&' pieces	{ 	$$ = intersection_dfazing_nfa(&$1, &$3); 
+	| 	regexp '&' pieces	{ 	$$ = intersection_dfazing_nfa(set_ids_of_nfa(&$1), set_ids_of_nfa(&$3)); 
 								destroy_nfa_t(destroy_nodes_of_nfa(&$1)); 
 								destroy_nfa_t(destroy_nodes_of_nfa(&$3)); }
 	;
@@ -77,6 +74,7 @@ atom :	'(' regexp ')'		{ $$ = $2; }
 	|	'[' '^' subset ']'	{ $$ = range_to_nfa(complement_range(&$3)); }
 	|	'[' subset ']'		{ $$ = range_to_nfa(&$2); }
 	|	LITERAL				{ $$ = literal_to_nfa($1); }
+	|	'^'					{ $$ = literal_to_nfa('^'); }
 	;
 
 subset : ']' 				{ set_in_range(clear_range(&$$), ']'); }

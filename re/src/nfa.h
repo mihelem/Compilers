@@ -70,6 +70,7 @@ vector_type(pnfa_node_t) *unset_flags (vector_type(pnfa_node_t) nodes[static 1],
 vector_type(pnfa_node_t) *set_flags (vector_type(pnfa_node_t) nodes[static 1], const uint64_t flags);
 nfa_t *apply_flags_to_nfa (nfa_t nfa[static 1], const uint64_t flags, const uint64_t unflags);
 vector_type(pnfa_node_t) *make_unique_nfa_nodes (vector_type(pnfa_node_t) nodes[static 1]);
+nfa_t *set_ids_of_nfa (nfa_t nfa[static 1]);
 
 vector_def_header(nfa_t);
 
