@@ -305,3 +305,51 @@ nfa_t *intersect_dfazing_nfa (nfa_t nfa[static 1], nfa_t nfa1[static 1], nfa_t n
 
 	return nfa;
 }
+
+nfa_t complementation_nfa (nfa_t in[static 1]) {
+	nfa_t out;
+
+	set_ids_of_nfa(in);
+	vector_type(pnfa_node_t) nodes = nfa_to_dfa(in, &out); 
+	nfa_node_t *final_node = place_nfa_node_t(malloc(sizeof(nfa_node_t)), flag_nfa_node_final);
+	uint8_t c = 0;
+	do {
+		add_nfa_edge(final_node, final_node, c);
+	} while(++c);
+
+	bool final_node_connected = false;
+	clear_nfa_final(&out);
+	forall (&nodes, i) {
+		nodes.data[i]->flags ^= flag_nfa_node_final;
+		do {
+			if (is_empty_vector(pnfa_node_t, nodes.data[i]->out+c)) {
+				add_nfa_edge(nodes.data[i], final_node, c);
+				final_node_connected = true;
+			}
+		} while(++c);
+		if (nodes.data[i]->flags & flag_nfa_node_final) {
+			add_nfa_final(&out, nodes.data[i]);
+		}
+	}
+
+	if (final_node_connected) {
+		push_back_vector(pnfa_node_t, &nodes, final_node);
+		add_nfa_final(&out, final_node);
+	} else {
+		destroy_nfa_node_t(final_node);
+		free(final_node);
+		final_node = NULL;
+	}
+
+	destroy_vector(pnfa_node_t, &nodes);
+	return out;
+}
+
+nfa_t *complement_nfa (nfa_t in[static 1], nfa_t out[static 1]) {
+	*out = complementation_nfa(in);
+	destroy_nodes_of_nfa(in);
+	destroy_nfa_t(in);
+
+	return out;
+}
+

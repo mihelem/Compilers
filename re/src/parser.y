@@ -28,7 +28,7 @@ void yyerror(char *s) {
 %token <character> LITERAL
 %type <character> rliteral
 %type <range> subset lrange range
-%type <nfa> atom piece pieces regexp
+%type <nfa> atom ppiece cpiece piece pieces regexp
 %type <list> lines
 
 %%
@@ -49,22 +49,21 @@ regexp : pieces				{ 	$$ = $1; }
 	;
 
 pieces : piece 				{ 	$$ = $1; }
-	|	'>' piece 			{ 	$$ = $2; 
-								apply_flags_to_nfa(&$$, flag_nfa_node_final, ~flag_nfa_node_visited); }
-	|	piece '<'			{ 	$$ = $1; 
-								apply_flags_to_nfa(&$$, flag_nfa_node_initial, ~flag_nfa_node_visited); }
-	|	'>' piece '<'		{ 	$$ = $2; 
-								apply_flags_to_nfa(&$$, flag_nfa_node_initial|flag_nfa_node_final, ~flag_nfa_node_visited); }
-	|	pieces piece 		{ 	concatenate_nfa(&$$, &$1, &$2); }
-	|	pieces '>' piece 	{ 	apply_flags_to_nfa(&$3, flag_nfa_node_final, ~flag_nfa_node_visited); 
-								concatenate_nfa(&$$, &$1, &$3); }
-	| 	pieces piece '<'	{ 	apply_flags_to_nfa(&$2, flag_nfa_node_initial, ~flag_nfa_node_visited);
-								concatenate_nfa(&$$, &$1, &$2); }
-	|	pieces '>' piece '<'{ 	apply_flags_to_nfa(&$3, flag_nfa_node_initial|flag_nfa_node_final, ~flag_nfa_node_visited);
-								concatenate_nfa(&$$, &$1, &$3); }
+	|	pieces piece 		{	concatenate_nfa(&$$, &$1, &$2); }
 	;
 
-piece : atom '*'			{ $$ = $1; make_avoidable_nfa(make_repeatable_nfa(&$$)); }
+piece : cpiece				{	$$ = $1; }
+	|	'^' cpiece			{	complement_nfa(&$2, &$$); } 
+
+cpiece : ppiece				{	$$ = $1; }
+	|	'>' ppiece 			{ 	$$ = $2; 
+								apply_flags_to_nfa(&$$, flag_nfa_node_final, ~flag_nfa_node_visited); }
+	|	ppiece '<'			{ 	$$ = $1; 
+								apply_flags_to_nfa(&$$, flag_nfa_node_initial, ~flag_nfa_node_visited); }
+	|	'>' ppiece '<'		{ 	$$ = $2; 
+								apply_flags_to_nfa(&$$, flag_nfa_node_initial|flag_nfa_node_final, ~flag_nfa_node_visited); }
+
+ppiece : atom '*'			{ $$ = $1; make_avoidable_nfa(make_repeatable_nfa(&$$)); }
 	|	atom '+'			{ $$ = $1; make_repeatable_nfa(&$$); }
 	|	atom '?'			{ $$ = $1; make_avoidable_nfa(&$$); }
 	|	atom				{ $$ = $1; }
@@ -74,7 +73,6 @@ atom :	'(' regexp ')'		{ $$ = $2; }
 	|	'[' '^' subset ']'	{ $$ = range_to_nfa(complement_range(&$3)); }
 	|	'[' subset ']'		{ $$ = range_to_nfa(&$2); }
 	|	LITERAL				{ $$ = literal_to_nfa($1); }
-	|	'^'					{ $$ = literal_to_nfa('^'); }
 	;
 
 subset : ']' 				{ set_in_range(clear_range(&$$), ']'); }
