@@ -5,6 +5,7 @@ goto_coder_options_t *place_goto_coder_options_t (goto_coder_options_t options[s
 	place_string_t(&options->preamble_code);
 	place_string_t(&options->automata_def_code);
 	place_string_t(&options->automata_preamble_code);
+	place_string_t(&options->automata_start_code);
 	place_string_t(&options->initial_node_action_code);
 	place_string_t(&options->final_node_action_code);
 	place_string_t(&options->node_action_code);
@@ -19,6 +20,7 @@ goto_coder_options_t *destroy_goto_coder_options_t (goto_coder_options_t options
 	destroy_string_t(&options->preamble_code);
 	destroy_string_t(&options->automata_def_code);
 	destroy_string_t(&options->automata_preamble_code);
+	destroy_string_t(&options->automata_start_code);
 	destroy_string_t(&options->initial_node_action_code);
 	destroy_string_t(&options->final_node_action_code);
 	destroy_string_t(&options->node_action_code);
@@ -87,12 +89,25 @@ string_t *automata_from_options_goto_coder (
 	cat_string_t(code, &options->automata_def_code);
 	cat_bytes_string_t(code, cum_size_literal("{\n"));
 	cat_string_t(code, &options->automata_preamble_code);
+	cat_string_t(code, &options->automata_start_code);
 
 	forall (nodes, i) {
 		node_coder(nodes->data[i], code, options);
 	}
 	cat_bytes_string_t(code, cum_size_literal("}\n"));
 
+	return code;
+}
+
+string_t *append_start_node(string_t code[static 1], vector_type(pnfa_node_t) nodes[static 1]) {
+	char num[50]; 
+	forall (nodes, i) {
+		if (nodes->data[i]->flags & flag_nfa_node_initial) {
+			sprintf(num, "%lu", nodes->data[i]->id);
+			cat_cstring_string_t(code, num);
+			return code;
+		}
+	}
 	return code;
 }
 
@@ -152,6 +167,14 @@ string_t re_matcher_goto_coder(
 		"\tsize_t counter = 0;\n"
 		"\tvector_type(size_t) ends = vector(size_t, 0);\n"));
 
+	cat_bytes_string_t(&searchdfa_options.automata_start_code,
+		cum_size_literal(
+		"\tgoto node"));
+	append_start_node(&searchdfa_options.automata_start_code, searchmdfa_nodes);
+	cat_bytes_string_t(&searchdfa_options.automata_start_code, 
+		cum_size_literal(
+		";\n"));
+
 	cat_bytes_string_t(&searchdfa_options.final_node_action_code,
 		cum_size_literal(
 		"\tpush_back_vector(size_t, &ends, counter);\n"));
@@ -185,6 +208,14 @@ string_t re_matcher_goto_coder(
 		"\n"
 		"\tmatches_t matches;\n"
 		"\tplace_matches_t(&matches);\n"));
+
+	cat_bytes_string_t(&reversedfa_options.automata_start_code,
+		cum_size_literal(
+		"\tgoto node"));
+	append_start_node(&reversedfa_options.automata_start_code, reversedfa_nodes);
+	cat_bytes_string_t(&reversedfa_options.automata_start_code, 
+		cum_size_literal(
+		";\n"));
 
 	cat_bytes_string_t(&reversedfa_options.initial_node_action_code,
 		cum_size_literal(

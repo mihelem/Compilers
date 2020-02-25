@@ -80,11 +80,22 @@ void print_response (nfa_t nfa[static 1]) {
 	place_nfa_t(&reversedfa);
 	vector_type(pnfa_node_t) reversedfa_nodes = vector(pnfa_node_t, 0);
 
+	nfa_node_t singleton_node;
+	place_nfa_node_t(&singleton_node, flag_nfa_node_initial);
+	nfa_node_t *psingleton_node = &singleton_node;
+	vector_type(pnfa_node_t) singleton_nodes = vector(pnfa_node_t, 0);
+	singleton_nodes.data = &psingleton_node;
+	singleton_nodes.end = singleton_nodes.capacity = 1;
+
 	if (checked_options & mdfa_checked) {
 		mdfa_nodes = brzozowski_minimization_of_nfa(nfa, &mdfa);
 		if (checked_options & mdfa_gotocode) {
 			separator(mdfa_gotocode);
-			string_t code = dfa_goto_coder(&mdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", "");
+			string_t code = 
+				dfa_goto_coder(
+					&mdfa, 
+					"printer", 
+					"\tif ((c = getchar())==EOF) { return accepted_states; }\n", "");
 			printf("%s\n", cstringify_string_t(&code));
 			destroy_string_t(&code);
 		}
@@ -109,17 +120,16 @@ void print_response (nfa_t nfa[static 1]) {
 		place_nfa_t(&searchnfa);
 		vector_type(pnfa_node_t) searchnfa_nodes = nfa_to_search_automata(source, &searchnfa);
 		searchmdfa_nodes = brzozowski_minimization_of_nfa(&searchnfa, &searchmdfa);
-
-		forall (&searchnfa_nodes, i) {
-			destroy_nfa_node_t(searchnfa_nodes.data[i]);
-			free(searchnfa_nodes.data[i]);
-		}
-		destroy_vector(pnfa_node_t, &searchnfa_nodes);
-		destroy_nfa_t(&searchnfa);
+		destroy_nfa_with_nodes(&searchnfa, &searchnfa_nodes);
 		
 		if (checked_options & searchmdfa_gotocode) {
 			separator(searchmdfa_gotocode);
-			string_t code = dfa_goto_coder(&searchmdfa, "printer", "\tif ((c = getchar())==EOF) { return accepted_states; }\n", "goto node0;");
+			string_t code = 
+				dfa_goto_coder(
+					&searchmdfa, 
+					"printer", 
+					"\tif ((c = getchar())==EOF) { return accepted_states; }\n", 
+					"goto node0;");
 			printf("%s\n", cstringify_string_t(&code));
 			destroy_string_t(&code);
 		}
@@ -129,58 +139,30 @@ void print_response (nfa_t nfa[static 1]) {
 		}
 		if (checked_options & searchmdfa_match) {
 			separator(searchmdfa_match);
-			if (checked_options & mdfa_checked) {
-				reversedfa_nodes = reverse_nfa(&mdfa, &reversedfa);
-			} else {
-				nfa_t dfa;
-				vector_type(pnfa_node_t) dfa_nodes = nfa_to_dfa(nfa, &dfa);
+			nfa_t *source = 
+				checked_options & mdfa_checked
+				? &mdfa
+				: nfa;
 
-				nfa_t rnfa;
-				vector_type(pnfa_node_t) rnfa_nodes = reverse_nfa(&dfa, &rnfa);
+			nfa_t rnfa;
+			vector_type(pnfa_node_t) rnfa_nodes = reverse_nfa(source, &rnfa);
 
-				forall(&dfa_nodes, i) {
-					destroy(nfa_node_t)(dfa_nodes.data[i]);
-					free(dfa_nodes.data[i]);
-				}
-				destroy_vector(pnfa_node_t, &dfa_nodes);
-				destroy(nfa_t)(&dfa);
+			reversedfa_nodes = nfa_to_dfa(&rnfa, &reversedfa);
+			destroy_nfa_with_nodes(&rnfa, &rnfa_nodes);
 
-				reversedfa_nodes = nfa_to_dfa(&rnfa, &reversedfa);
-
-				forall(&rnfa_nodes, i) {
-					destroy(nfa_node_t)(rnfa_nodes.data[i]);
-					free(rnfa_nodes.data[i]);
-				}
-				destroy_vector(pnfa_node_t, &rnfa_nodes);
-				destroy(nfa_t)(&rnfa);
-			}
-
-			string_t code = re_matcher_goto_coder(&searchmdfa_nodes, &reversedfa_nodes);
+			string_t code = 
+				re_matcher_goto_coder(
+					is_empty_nfa(&searchmdfa) ? &singleton_nodes : &searchmdfa_nodes, 
+					is_empty_nfa(&reversedfa) ? &singleton_nodes : &reversedfa_nodes);
 			printf("%s\n", cstringify_string_t(&code));
 			destroy_string_t(&code);
 		}
 	}
  
-	forall (&mdfa_nodes, i) {
-		destroy_nfa_node_t(mdfa_nodes.data[i]);
-		free(mdfa_nodes.data[i]);
-	}
-	destroy_vector(pnfa_node_t, &mdfa_nodes);
-	destroy_nfa_t(&mdfa);
-
-	forall (&searchmdfa_nodes, i) {
-		destroy_nfa_node_t(searchmdfa_nodes.data[i]);
-		free(searchmdfa_nodes.data[i]);
-	}
-	destroy_vector(pnfa_node_t, &searchmdfa_nodes);
-	destroy_nfa_t(&searchmdfa);
-
-	forall (&reversedfa_nodes, i) {
-		destroy_nfa_node_t(reversedfa_nodes.data[i]);
-		free(reversedfa_nodes.data[i]);
-	}
-	destroy_vector(pnfa_node_t, &reversedfa_nodes);
-	destroy_nfa_t(&reversedfa);
+	destroy_nfa_with_nodes(&mdfa, &mdfa_nodes);
+	destroy_nfa_with_nodes(&searchmdfa, &searchmdfa_nodes);
+	destroy_nfa_with_nodes(&reversedfa, &reversedfa_nodes);
+	destroy_nfa_node_t(&singleton_node);
 
 	#undef separator
 }

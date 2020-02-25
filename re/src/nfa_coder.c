@@ -100,8 +100,17 @@ string_t *dfa_goto_coder_body (
 }
 
 string_t dfa_goto_coder (nfa_t dfa[static 1], const char *name, const char *input, const char *default_action) {
-	vector_type(pnfa_node_t) nodes = dfs_with_action_nfa(dfa, dummy_print_nfa_node);
-	unset_flags(&nodes, ~flag_nfa_node_visited);
+	vector_type(pnfa_node_t) nodes;
+	nfa_node_t node;
+	if (is_empty_nfa(dfa)) {
+		nodes = vector(pnfa_node_t, 1);
+		place_nfa_node_t(&node, flag_nfa_node_initial);
+		push_back_vector(pnfa_node_t, &nodes, &node);
+	} else {
+		nodes = dfs_with_action_nfa(dfa, dummy_print_nfa_node);
+		unset_flags(&nodes, ~flag_nfa_node_visited);
+	}
+
 	string_t code;
 	place_string_t(&code);
 

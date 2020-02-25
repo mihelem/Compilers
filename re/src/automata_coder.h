@@ -4,6 +4,7 @@ typedef struct goto_coder_options_t {
 	string_t preamble_code;
 	string_t automata_def_code;
 	string_t automata_preamble_code;
+	string_t automata_start_code;
 	string_t initial_node_action_code;
 	string_t final_node_action_code;
 	string_t node_action_code;
@@ -18,6 +19,8 @@ string_t *automata_from_options_node_goto_coder (
 	nfa_node_t node[static 1],
 	string_t code[static 1],
 	goto_coder_options_t const options[static 1]);
+
+string_t *append_start_node(string_t code[static 1], vector_type(pnfa_node_t) nodes[static 1]);
 
 string_t *automata_from_options_goto_coder (
 	vector_type(pnfa_node_t) nodes[static 1],

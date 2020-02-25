@@ -43,6 +43,7 @@ void add_nfa_initial (nfa_t nfa[static 1], nfa_node_t initial[static 1]);
 void add_nfa_final (nfa_t nfa[static 1], nfa_node_t final[static 1]);
 void clear_nfa_initial (nfa_t nfa[static 1]);
 void clear_nfa_final (nfa_t nfa[static 1]);
+bool is_empty_nfa(nfa_t const nfa[static 1]);
 // '\0' is the label of the empty transistion
 nfa_t range_to_nfa (range_t range[static 1]);
 nfa_t literal_to_nfa (const uint8_t literal);
@@ -78,5 +79,7 @@ vector_def_header(vector_type(pnfa_node_t));
 typedef vector_type(vector_type(pnfa_node_t)) subset_dfa_nodes_t;
 
 nfa_t intersection_nfa (const nfa_t nfa1[static 1], const nfa_t nfa2[static 1]);
+
+void destroy_nfa_with_nodes (nfa_t nfa[static 1], vector_type(pnfa_node_t) nodes[static 1]);
 
 #endif

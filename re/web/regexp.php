@@ -122,7 +122,7 @@ final class RegExp {
 	}
 
 	public static function getBuildName($name_prefix) {
-		return PAth::BUILDDIR.$name_prefix.$_SESSION['nonce'];
+		return Path::BUILDDIR.$name_prefix.$_SESSION['nonce'];
 	}
 
 	protected function buildCode($name_prefix, $code) {
