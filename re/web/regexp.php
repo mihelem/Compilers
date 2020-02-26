@@ -32,10 +32,14 @@ final class RegExp {
 
 	public static function writeFile($filename, $content) {
 		$handle = fopen($filename, 'wb');
-		fwrite($handle, $content);
-		fclose($handle);
+		if (is_resource($handle)) {
+			fwrite($handle, $content);
+			fclose($handle);
 
-		return true;
+			return true;
+		}
+
+		return false;
 	}
 
 	public function saveInput() {
@@ -58,24 +62,44 @@ final class RegExp {
 	}
 
 	public function parse() {
-		$command = self::REGEXPARSER.' '.implode(' ', $this->getParserArgs())." < ".$this->filename;
-		$parser_output =
-			explode(
-				self::SEPARATOR,
-				shell_exec($command));
+		$command = self::REGEXPARSER.' '.implode(' ', $this->getParserArgs());
+		$descriptor = [
+			["pipe", "r"],
+			["pipe", "w"]];
+		$process = proc_open($command, $descriptor, $pipes);
+		if (is_resource($process)) {
+			fwrite($pipes[0], $this->filename."\n");
+			fclose($pipes[0]);
 
-		foreach ($parser_output as $i => $output) {
-			$id = strstr($output, "\n", true);
-			if ($id) {
-				$this->options[$this->roptions[$id]['graph']][$this->roptions[$id]['opt']]['body'] =
-					strstr($output, "\n");
+			$parser_output = explode(
+				self::SEPARATOR,
+				stream_get_contents($pipes[1]));
+			fclose($pipes[1]);
+			proc_close($process);
+
+			foreach ($parser_output as $i => $output) {
+				$id = strstr($output, "\n", true);
+				if ($id == "error") {
+					$this->options["error"]["body"] = strstr($output, "\n");
+				} else if ($id) {
+					$this->options[$this->roptions[$id]['graph']][$this->roptions[$id]['opt']]['body'] =
+						strstr($output, "\n");
+				}
 			}
 		}
 
 		return $this;
 	}
 
-	protected function renderBody(
+	protected function getRenderError() {
+		return 
+			(array_key_exists("error", $this->options) 
+			&& array_key_exists("body",$this->options["error"]))
+			? $this->options["error"]["body"]
+			: "";
+	}
+
+	protected function getRenderBody(
 		$graph,
 		$opt)
 	{
@@ -121,6 +145,26 @@ final class RegExp {
 		}
 	}
 
+	public function getRenderResponse($options, $roptions) {
+		$response = $this->getRenderError();
+		if (!$response) {
+			$response = "<table>";
+			foreach ($options as $graph => $opts) {
+				$response .= "<tr>";
+				foreach ($opts as $opt_name => $opt) {
+					if ($opt['active'] == 1) {
+						$response .=
+							"<td>".$this->getRenderBody($graph, $opt_name)."</td>\n";
+					}
+				}
+				$response .= "</tr>\n";
+			}
+			$response .= "</table>\n";
+		}
+
+		return $response;
+	}
+
 	public static function getBuildName($name_prefix) {
 		return Path::BUILDDIR.$name_prefix.$_SESSION['nonce'];
 	}
@@ -148,18 +192,7 @@ final class RegExp {
 		$reg_exp->saveInput();
 		$reg_exp->parse();
 
-		$response = "<table>";
-		foreach ($options as $graph => $opts) {
-			$response .= "<tr>";
-			foreach ($opts as $opt_name => $opt) {
-				if ($opt['active'] == 1) {
-					$response .=
-						"<td>".$reg_exp->renderBody($graph, $opt_name)."</td>\n";
-				}
-			}
-			$response .= "</tr>\n";
-		}
-		$response .= "</table>\n";
+		$response = $reg_exp->getRenderResponse($options, $roptions);
 
 		return
 			utf8_encode($response."\n");
@@ -192,7 +225,7 @@ echo RegExp::renderResponse(
 		$roptions
 	);
 
-if (DEBUGGAMAN) {
+if (DEBUGGAMAN == true) {
 	echo "<hr><br>";
 	print_r($_REQUEST);
 	echo "<br><br><pre>";

@@ -82,6 +82,7 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 		vector(pnfa_node_t, 0));
 	empty_trans_closure(
 		concatenate_vector(pnfa_node_t, subsets.data, &in->initial));
+
 	// a subset is final if it contains a final node
 	uint64_t id = 0;
 	uint64_t flags = 0;
@@ -148,6 +149,7 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 				continue;
 			}
 			empty_trans_closure(&new_subset);
+			// is there make_unique?
 
 			clear_vector(uint64_t, &subset_ids);
 			pnfa_nodes_to_ids(&new_subset, &subset_ids);
@@ -183,16 +185,6 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 			//push_back_vector(pnfa_node_t, node_ptrs.data[subset_id]->out+c, node_ptr);
 		} while ( c++ != 255);
 	}
-
-	/*printf("\n---------------\n SUBSETS:\n");
-	forall(&subsets, i) {
-		printf("\n------------\n");
-		forall(&subsets.data[i], j) {
-			printf("%lu\t", subsets.data[i].data[j]->id);
-		}
-	}
-	printf("\n---------------\n");*/
-
 
 	destroy_vector(vector_type(pnfa_node_t), &subsets);
 	destroy_vector(uint64_t, &subset_ids);

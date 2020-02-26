@@ -2,43 +2,39 @@
 /* Author: Michele Miccinesi 02022020 	*/
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #include "scangen_types.h"
 #include "parser_helper.h"
 
 int yylex();
 
-void yyerror(char *s) {
-	fprintf(stderr, "%s\n", s);
-}
+void yyerror(const char *s, ...);
 
-/*lines regexp EOL	{ $$ = $1; push_back_vector(nfa_t, &$$, $2); 
-								//printf("lines : lines regexp EOL\n"); 
-								print_nfa(&$2, my_node_printer); }
-	| */
 %}
 
+%code requires {
+  bool parse(const char *filename);
+}
+
+%define parse.error verbose
+%locations
+
 %union {
-	range_t range;
 	uint8_t character;
+	range_t range;
 	nfa_t nfa; 
-	vector_nfa_t_t list;
 }
 
 %token EOL
 %token <character> LITERAL
 %type <character> rliteral
 %type <range> subset lrange range
-%type <nfa> atom ppiece cpiece piece pieces regexp
-%type <list> lines
+%type <nfa> atom ppiece cpiece piece pieces regexp start
 
 %%
 
-lines :	regexp EOL			{ 	
-								$$ = vector(nfa_t, 0); 
-								push_back_vector(nfa_t, &$$, $1); 
-								print_response(&$1); 
-								destroy_nodes_of_nfa(&$1); 
-								destroy_vector(nfa_t, &$$); }
+start :	regexp				{ 	print_response(&$1); 
+								destroy_nfa_t(destroy_nodes_of_nfa(&$1)); }
 	;
 
 regexp : pieces				{ 	$$ = $1; }
@@ -113,10 +109,30 @@ rliteral :	LITERAL	{ $$ = $1; }
 
 %%
 
+void yyerror(const char *s, ...) {
+	va_list ap;
+	va_start(ap, s);
+
+	printf("\n~~~~~~~~~~\n" "error" "\n");
+	if (yylloc.first_line) {
+		printf( 
+			"%d.%d-%d.%d: error: ", 
+			yylloc.first_line,
+			yylloc.first_column,
+			yylloc.last_line,
+			yylloc.last_column);
+	}
+	vprintf(s, ap);
+	printf("\n");
+}
+
 int main(int argc, char **argv) {
 	set_options_from_command_line(argc, argv);
 
-	yyparse();
+	char filename[5000];
+	scanf("%s", filename);
+
+	parse(filename);
 
 	return 0;
 }
