@@ -29,8 +29,8 @@ vector_type(uint64_t) *pnfa_nodes_to_ids (const vector_type(pnfa_node_t) in[stat
 	forall(in, i) {
 		push_back_vector(uint64_t, out, in->data[i]->id);
 	}
-	heapify(uint64_t, less, out->data+begin, out->end-begin);
-	heap_sort(uint64_t, less, out->data+begin, out->end-begin);
+	heapify(uint64_t, less, out->end-begin, out->data+begin);
+	heap_sort(uint64_t, less, out->end-begin, out->data+begin);
 
 	return out;
 }
@@ -69,6 +69,7 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 	nfa_t out[static 1],
 	vector_type(pnfa_node_t) *subset_transform (nfa_t [static 1], nfa_t [static 1], vector_type(pnfa_node_t) [static 1])) 
 {
+	set_ids_of_nfa(in);
 	// the new nfa - a dfa indeed
 	place_nfa_t(out);
 	// vector of subsets
@@ -185,6 +186,16 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 			//push_back_vector(pnfa_node_t, node_ptrs.data[subset_id]->out+c, node_ptr);
 		} while ( c++ != 255);
 	}
+	/*
+	printf("\n---------------\n SUBSETS:\n");
+	forall(&subsets, i) {
+		printf("\n------------\n");
+		forall(&subsets.data[i], j) {
+			printf("%lu\t", subsets.data[i].data[j]->id);
+		}
+	}
+	printf("\n---------------\n");
+	*/
 
 	destroy_vector(vector_type(pnfa_node_t), &subsets);
 	destroy_vector(uint64_t, &subset_ids);
@@ -198,6 +209,7 @@ vector_type(pnfa_node_t) transformed_subset_construction_nfa(
 // the only dead-end, for dfas coming out from regular expressions, is the empty dfa
 // for general dfas, here we should delete the unreachable nodes of the reverse dfa.
 vector_type(pnfa_node_t) reverse_nfa(nfa_t nfa[static 1], nfa_t  r_nfa[static 1]) {
+	set_ids_of_nfa(nfa);
 	place_nfa_t(r_nfa);
 	if (is_empty_nfa(nfa)) {
 		return vector(pnfa_node_t, 0);
@@ -230,7 +242,7 @@ vector_type(pnfa_node_t) reverse_nfa(nfa_t nfa[static 1], nfa_t  r_nfa[static 1]
 	return r_nodes;
 }
 
-vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t nfa[static 1] , nfa_t mdfa[static 1] ) {
+vector_type(pnfa_node_t) brzozowski_minimization_of_nfa(nfa_t nfa[static 1] , nfa_t mdfa[static 1]) {
 	if (is_empty_nfa(nfa)) {
 		place_nfa_t(mdfa);
 		return vector(pnfa_node_t, 0);

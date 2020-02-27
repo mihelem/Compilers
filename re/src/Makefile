@@ -1,6 +1,6 @@
 LEX?=flex
 YACC?=bison
-YFLAGS?=-d
+YFLAGS?=-d -v
 CFLAGS?=-O3 -Wall
 
 BINDIR = /var/www/bin/

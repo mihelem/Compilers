@@ -108,13 +108,10 @@ void print_response (nfa_t nfa[static 1]) {
 		}
 	}
 	if (checked_options & searchmdfa_checked) {
-		nfa_t *source;
-		if (checked_options & mdfa_checked) {
-			source = &mdfa;
-		} else {
-			source = nfa;
-			set_ids_of_nfa(nfa);
-		}
+		nfa_t *source = 
+			(checked_options & mdfa_checked)
+			? &mdfa
+			: nfa;
 
 		nfa_t searchnfa;
 		place_nfa_t(&searchnfa);
